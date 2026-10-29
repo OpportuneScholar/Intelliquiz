@@ -64,7 +64,7 @@ router.post('/forgot-password', async (req, res, next) => {
     user.passwordResetExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
 
-    const baseUrl = (process.env.CLIENT_ORIGIN || process.env.PUBLIC_URL || '').split(',')[0].trim().replace(/\/$/, '');
+    const baseUrl = (process.env.PUBLIC_URL || req.get('origin') || process.env.CLIENT_ORIGIN || '').split(',')[0].trim().replace(/\/$/, '');
     if (!baseUrl) {
       user.passwordResetTokenHash = undefined;
       user.passwordResetExpiresAt = undefined;

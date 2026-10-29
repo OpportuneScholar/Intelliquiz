@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const pool = require('./db/pool');
 const authRoutes = require('./routes/auth');
+const teacherRegistrationRoutes = require('./routes/teacherRegistration');
 const questionRoutes = require('./routes/questions');
 const examRoutes = require('./routes/exams');
 const { requireAuth, requireRole } = require('./middleware/auth');
@@ -16,6 +17,7 @@ app.use(cors({ origin: process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.spl
 app.use(express.json({ limit: '100kb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: 'draft-7', legacyHeaders: false }), authRoutes);
+app.use('/api/teacher-registration', rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false }), teacherRegistrationRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/exams', examRoutes);
 app.get('/api/health', async (_req, res) => {

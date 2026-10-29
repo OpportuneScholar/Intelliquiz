@@ -34,3 +34,5 @@ body[data-theme="light"] .theme-toggle{background:#fff;color:#17243c}
 .brand img{width:132px;height:104px;object-fit:contain;flex:none}
 .brand span{display:none}
 @media(max-width:520px){.topbar{height:92px}.brand img{width:104px;height:86px}}
+
+.primary.is-loading span.spinner{float:none;line-height:normal}

@@ -1,18 +1,15 @@
 {
   "name": "intelliquiz-backend",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
-  "description": "SQL/PostgreSQL REST API for IntelliQuiz",
+  "description": "MongoDB Atlas REST API for IntelliQuiz",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "seed:teacher": "node scripts/seedTeacher.js",
-    "check": "node --check server.js && node --check routes/auth.js && node --check routes/teacherRegistration.js && node --check routes/questions.js && node --check middleware/auth.js"
+    "check": "node --check server.js && node --check routes/auth.js && node --check routes/teacherRegistration.js && node --check routes/questions.js && node --check routes/exams.js && node --check middleware/auth.js && node --check models/User.js && node --check models/Question.js && node --check models/TeacherOtp.js && node --check models/Exam.js && node --check models/Submission.js"
   },
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -21,11 +18,9 @@
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.12.1",
     "morgan": "^1.10.0",
-    "pg": "^8.13.1",
     "resend": "^6.35.0"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.9"
-  }
+  "devDependencies": { "nodemon": "^3.1.9" }
 }

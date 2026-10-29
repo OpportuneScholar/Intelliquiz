@@ -28,3 +28,9 @@ body[data-theme="light"] .message.error{background:#fff0f0;border-color:#f3c2c2;
 body[data-theme="light"] .fine-print,body[data-theme="light"] footer{color:#64748b}
 body[data-theme="light"] .theme-toggle{background:#fff;color:#17243c}
 @media(max-width:520px){.header-actions{gap:8px}.status{display:none}.theme-toggle{font-size:10px;padding:9px 10px}.brand img{width:54px;height:54px}}
+
+/* Use the supplied IntelliQuiz wordmark as the header logo */
+.topbar{height:112px}
+.brand img{width:132px;height:104px;object-fit:contain;flex:none}
+.brand span{display:none}
+@media(max-width:520px){.topbar{height:92px}.brand img{width:104px;height:86px}}

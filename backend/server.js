@@ -16,7 +16,8 @@ const examRoutes = require('./routes/exams');
 const { requireAuth, requireRole } = require('./middleware/auth');
 
 const app = express();
-const publicDir = path.resolve(__dirname, '..');
+// Assets are bundled inside backend/public so this works when Voroa root is /backend.
+const publicDir = path.join(__dirname, 'public');
 
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -53,8 +54,7 @@ app.get('/api/dashboard/summary', requireAuth, requireRole('teacher'), async (_r
   }
 });
 
-// Serve only the public frontend files from the repository root.
-// The backend source, environment files, and package metadata are never exposed.
+// Serve the original IntelliQuiz frontend assets from the same service.
 app.get('/', (_req, res, next) => {
   res.sendFile(path.join(publicDir, 'index.html'), error => {
     if (error) next(error);
@@ -66,8 +66,7 @@ app.get('/index.html', (_req, res, next) => {
   });
 });
 app.get(['/config.js', '/style.css', '/app.js', '/logo.svg'], (req, res, next) => {
-  const fileName = path.basename(req.path);
-  res.sendFile(path.join(publicDir, fileName), error => {
+  res.sendFile(path.join(publicDir, path.basename(req.path)), error => {
     if (error) next(error);
   });
 });

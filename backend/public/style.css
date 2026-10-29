@@ -37,3 +37,22 @@ body[data-theme="light"] .theme-toggle{background:#fff;color:#17243c}
 @media(max-width:520px){.topbar{height:112px;padding:0 16px}.brand img{width:146px;height:108px;transform:scale(1.12)}}
 
 .primary.is-loading span.spinner{float:none;line-height:normal}
+
+/* App startup loader */
+.page-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0b1020;color:#f3f5ff;font:500 13px 'DM Sans',sans-serif;opacity:1;visibility:visible;transition:opacity .35s ease,visibility .35s ease}
+.page-loader-hidden{opacity:0;visibility:hidden;pointer-events:none}
+.loader-mark{width:94px;height:94px;position:relative;display:grid;place-items:center}
+.loader-mark:before,.loader-mark:after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid transparent}
+.loader-mark:before{border-top-color:#65dfb0;border-right-color:#65dfb0;animation:iq-spin .9s linear infinite}
+.loader-mark:after{inset:8px;border-bottom-color:#a994ff;border-left-color:#a994ff;animation:iq-spin 1.5s linear infinite reverse}
+.loader-mark img{width:66px;height:66px;object-fit:contain;border-radius:10px;position:relative;z-index:1}
+.page-loader p{margin:0;color:#a5afca;letter-spacing:.2px}
+.loader-track{height:3px;width:170px;border-radius:10px;overflow:hidden;background:#26314a}
+.loader-track i{display:block;width:38%;height:100%;border-radius:10px;background:linear-gradient(90deg,#a994ff,#65dfb0);animation:iq-load-progress 1.3s ease-in-out infinite}
+@keyframes iq-load-progress{0%{transform:translateX(-120%)}100%{transform:translateX(380%)}}
+body[data-theme="light"] .page-loader{background:#f4f7fc;color:#17243c}
+body[data-theme="light"] .page-loader p{color:#5c6b83}
+body[data-theme="light"] .loader-track{background:#dce4f0}
+@media(prefers-reduced-motion:reduce){.loader-mark:before,.loader-mark:after,.loader-track i{animation:none}.loader-track i{width:100%}}
+/* Header wordmark: use the available original asset at a readable mobile size */
+@media(max-width:520px){.topbar{height:116px}.brand{width:176px}.brand img{width:176px;height:112px;transform:none;object-fit:contain}.header-actions{margin-left:auto}}

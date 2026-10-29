@@ -30,9 +30,10 @@ body[data-theme="light"] .theme-toggle{background:#fff;color:#17243c}
 @media(max-width:520px){.header-actions{gap:8px}.status{display:none}.theme-toggle{font-size:10px;padding:9px 10px}.brand img{width:54px;height:54px}}
 
 /* Use the supplied IntelliQuiz wordmark as the header logo */
-.topbar{height:112px}
-.brand img{width:132px;height:104px;object-fit:contain;flex:none}
+.topbar{height:124px;overflow:hidden}
+.brand{height:100%;min-width:0;overflow:hidden}
+.brand img{display:block;width:154px;height:120px;max-width:none;object-fit:contain;flex:none;transform:scale(1.16);transform-origin:left center}
 .brand span{display:none}
-@media(max-width:520px){.topbar{height:92px}.brand img{width:104px;height:86px}}
+@media(max-width:520px){.topbar{height:112px;padding:0 16px}.brand img{width:146px;height:108px;transform:scale(1.12)}}
 
 .primary.is-loading span.spinner{float:none;line-height:normal}

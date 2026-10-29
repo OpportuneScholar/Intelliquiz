@@ -1,17 +1,12 @@
 const router = require('express').Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const pool = require('../db/pool');
 
 function mailer() {
-  const { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS } = process.env;
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) return null;
-  return nodemailer.createTransport({
-    host: SMTP_HOST, port: Number(SMTP_PORT),
-    secure: SMTP_SECURE === 'true',
-    auth: { user: SMTP_USER, pass: SMTP_PASS }
-  });
+  if (!process.env.RESEND_API_KEY) return null;
+  return new Resend(process.env.RESEND_API_KEY);
 }
 function otpDigest(email, otp) {
   return crypto.createHash('sha256').update(email.toLowerCase() + ':' + otp).digest('hex');
@@ -27,7 +22,7 @@ router.post('/request-otp', async (req, res, next) => {
       return res.status(400).json({ message: 'Provide a valid name, email, and password of at least 10 characters.' });
     }
     const sendMail = mailer();
-    if (!sendMail) return res.status(503).json({ message: 'Email OTP is not configured yet. Set SMTP settings in the server environment.' });
+    if (!sendMail) return res.status(503).json({ message: 'Email OTP is not configured yet. Set RESEND_API_KEY in the server environment.' });
 
     const normalizedEmail = email.toLowerCase().trim();
     const exists = await pool.query('SELECT 1 FROM users WHERE email=$1', [normalizedEmail]);
@@ -48,13 +43,14 @@ router.post('/request-otp', async (req, res, next) => {
     );
 
     try {
-      await sendMail.sendMail({
-        from: process.env.MAIL_FROM || process.env.SMTP_USER,
-        to: normalizedEmail,
+      const { error } = await sendMail.emails.send({
+        from: process.env.MAIL_FROM || 'IntelliQuiz <onboarding@resend.dev>',
+        to: [normalizedEmail],
         subject: 'Your IntelliQuiz teacher verification code',
         text: 'Your IntelliQuiz teacher verification code is ' + otp + '. It expires in 10 minutes. If you did not request this, ignore this email.',
-        html: '<p>Your IntelliQuiz teacher verification code is:</p><p style="font-size:28px;font-weight:bold;letter-spacing:6px">' + otp + '</p><p>This code expires in 10 minutes. If you did not request this, ignore this email.</p>'
+        html: '<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px"><h2>IntelliQuiz teacher verification</h2><p>Use this one-time code to verify your email:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;background:#f3f4f6;padding:18px;text-align:center;border-radius:10px">' + otp + '</p><p>This code expires in 10 minutes. Never share it with anyone.</p><p>If you did not request this, you can ignore this email.</p></div>'
       });
+      if (error) throw new Error(error.message || 'Resend email delivery failed');
     } catch (mailError) {
       await pool.query('DELETE FROM teacher_registration_otps WHERE email=$1', [normalizedEmail]);
       console.error('Teacher OTP email delivery failed:', mailError.message);

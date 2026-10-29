@@ -1,30 +1,37 @@
-# IntelliQuiz SQL Backend (PostgreSQL)
+# IntelliQuiz Backend (MongoDB Atlas)
 
-## Requirements
-- Node.js 20+
-- PostgreSQL 14+ (local installation or hosted PostgreSQL)
+Node.js/Express API using MongoDB Atlas through Mongoose. PostgreSQL is no longer used by the active backend.
 
-## Setup
-1. Create a PostgreSQL database named `intelliquiz`.
-2. Run `schema.sql` against that database, then run `migrations/001_teacher_email_otp.sql`.
-3. Copy `.env.example` to `.env` and set `DATABASE_URL`, a unique random `JWT_SECRET` (at least 32 characters), and Resend API key (`RESEND_API_KEY`) and sender (`MAIL_FROM`) so teacher OTP emails can be sent.
-4. In this folder run `npm install`.
-5. Run `npm run check` to validate JavaScript syntax.
-6. Run `npm run seed:teacher` to create/update the teacher account.
-7. Run `npm run dev`; test `GET http://localhost:5000/api/health`.
+## Run locally
+1. Copy `.env.example` to `.env`.
+2. Set `MONGODB_URI` to your MongoDB Atlas connection string. Replace the username/password placeholders and ensure the URI targets the `intelliquiz` database.
+3. Set `JWT_SECRET` to a random secret of at least 32 characters.
+4. Set `RESEND_API_KEY` and a verified `MAIL_FROM` sender for teacher email OTP.
+5. Run `npm install`, then `npm start` from this `backend` directory.
 
-## Main endpoints
-- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
-- `POST /api/teacher-registration/request-otp` (name, email, password)
-- `POST /api/teacher-registration/verify-otp` (email, six-digit otp)
-- `GET/POST /api/questions`, `PATCH/DELETE /api/questions/:id`
-- `GET/POST /api/exams`, `PATCH /api/exams/:id`
-- `POST /api/exams/:id/submit`
-- `GET /api/exams/:id/results` (teacher)
-- `GET /api/exams/student/my-results` (student)
-- `GET /api/dashboard/summary` (teacher)
+## API
+- `GET /api/health` — API/database status
+- `POST /api/auth/register` — student registration
+- `POST /api/auth/login` — student/teacher login
+- `GET /api/auth/me` — current account (Bearer token)
+- `POST /api/teacher-registration/request-otp` — send teacher email OTP
+- `POST /api/teacher-registration/verify-otp` — verify OTP and create teacher
+- `/api/questions` — teacher question management; student reads omit correct answers
+- `/api/exams` — teacher exam create/list/publish, public exam details and student submissions
 
-Send `Authorization: Bearer <token>` for authenticated routes. Public `/api/auth/register` creates student accounts. Teachers can self-register only after email OTP verification using the teacher-registration endpoints. OTP expires after 10 minutes and has a maximum of 5 verification attempts. Resend must be configured for email delivery. Use `onboarding@resend.dev` for initial testing only; to send to arbitrary recipients/from your own branded address, configure and verify your sending domain in Resend. Keep `RESEND_API_KEY` secret and set it in your hosting provider's environment variables, not in frontend code or Git.
+## Deployment
+For Voroa, use the backend directory as the app root if supported. Build command: `npm install`; start command: `npm start`. If the platform builds from repository root, use `cd backend && npm install` and start with `cd backend && npm start`. If logs say `npm: not found`, select/enable the Node.js runtime/build environment; changing the database does not fix that platform runtime issue.
 
-## Status
-This is a development starter. The existing HTML/CSS/JS frontend has not yet been fully wired to these APIs. Complete frontend integration, end-to-end tests, deployment configuration, and security review before production use. Test exam attempt enforcement under concurrent requests before production.
+Set these environment variables in the host dashboard, not in GitHub:
+- `MONGODB_URI`
+- `JWT_SECRET`
+- `NODE_ENV=production`
+- `CLIENT_ORIGIN` (the deployed frontend origin)
+- `RESEND_API_KEY`
+- `MAIL_FROM` (a sender verified in Resend)
+
+## MongoDB Atlas setup
+Create a database user with only the required database access where possible. Add the deployment host's outbound IP range to Network Access; only use `0.0.0.0/0` if required by the hosting platform and you understand it permits connections from any IP, with credentials still required. URL-encode special characters in the database password. Never commit real connection strings or API keys.
+
+## Current limitations
+This backend has not yet been verified against a live Atlas cluster or live Resend account. Exam submission currently checks attempt count but is not a transactional, server-timed attempt system; complete timed-attempt enforcement before using for high-stakes exams. The existing frontend files still need to be added/integrated with these APIs.

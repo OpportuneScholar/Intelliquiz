@@ -1,1 +1,14 @@
-const mongoose=require('mongoose');const schema=new mongoose.Schema({exam:{type:mongoose.Schema.Types.ObjectId,ref:'Exam',required:true,index:true},student:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true,index:true},answers:{type:mongoose.Schema.Types.Mixed,default:{}},score:{type:Number,required:true,min:0},totalQuestions:{type:Number,required:true,min:0},percentage:{type:Number,required:true,min:0,max:100},durationSeconds:{type:Number,default:0,min:0},submittedAt:{type:Date,default:Date.now}},{timestamps:true,versionKey:false});schema.index({exam:1,student:1});module.exports=mongoose.models.Submission||mongoose.model('Submission',schema);
+const mongoose = require('mongoose');
+const schema = new mongoose.Schema({
+  exam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true, index: true },
+  student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  attempt: { type: mongoose.Schema.Types.ObjectId, ref: 'ExamAttempt', required: true, unique: true },
+  answers: { type: mongoose.Schema.Types.Mixed, default: {} },
+  score: { type: Number, required: true, min: 0 },
+  totalQuestions: { type: Number, required: true, min: 0 },
+  percentage: { type: Number, required: true, min: 0, max: 100 },
+  durationSeconds: { type: Number, default: 0, min: 0 },
+  submittedAt: { type: Date, default: Date.now }
+}, { timestamps: true, versionKey: false });
+schema.index({ exam: 1, student: 1 });
+module.exports = mongoose.models.Submission || mongoose.model('Submission', schema);

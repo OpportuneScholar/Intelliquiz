@@ -17,7 +17,11 @@ Node.js/Express API using MongoDB Atlas through Mongoose. PostgreSQL is no longe
 - `POST /api/teacher-registration/request-otp` — send teacher email OTP
 - `POST /api/teacher-registration/verify-otp` — verify OTP and create teacher
 - `/api/questions` — teacher question management; student reads omit correct answers
-- `/api/exams` — teacher exam create/list/publish, public exam details and student submissions
+- `/api/exams` — teacher exam create/list/publish/results; student exam listing and result history
+- `POST /api/exams/:id/start` — starts or resumes a server-timed student attempt
+- `GET /api/exams/:id/attempt/active` — restores the current attempt after refresh
+- `PATCH /api/exams/:id/attempt/:attemptId` — autosaves validated student answers
+- `POST /api/exams/:id/attempt/:attemptId/submit` — grades saved answers using server-side answer keys and server timestamps
 
 ## Deployment
 For Voroa, use the backend directory as the app root if supported. Build command: `npm install`; start command: `npm start`. If the platform builds from repository root, use `cd backend && npm install` and start with `cd backend && npm start`. If logs say `npm: not found`, select/enable the Node.js runtime/build environment; changing the database does not fix that platform runtime issue.

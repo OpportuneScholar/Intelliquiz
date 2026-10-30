@@ -55,4 +55,9 @@ body[data-theme="light"] .page-loader p{color:#5c6b83}
 body[data-theme="light"] .loader-track{background:#dce4f0}
 @media(prefers-reduced-motion:reduce){.loader-mark:before,.loader-mark:after,.loader-track i{animation:none}.loader-track i{width:100%}}
 /* Header wordmark: use the available original asset at a readable mobile size */
-@media(max-width:520px){.topbar{height:116px}.brand{width:176px}.brand img{width:176px;height:112px;transform:none;object-fit:contain}.header-actions{margin-left:auto}}
+@media(max-width:520px){.topbar{height:126px;padding:0 12px}.brand{width:190px;height:124px}.brand img{width:190px;height:124px;transform:none;object-fit:contain;object-position:left center}.header-actions{margin-left:auto;flex-shrink:0}.theme-toggle{padding:10px 11px}}
+
+/* Smooth theme transition without delaying controls */
+body,body *{transition-property:background-color,border-color,color,box-shadow;transition-duration:.22s;transition-timing-function:ease}
+button,.primary,.secondary{transition:transform .16s ease,filter .16s ease,opacity .16s ease,background-color .22s ease}
+@media(prefers-reduced-motion:reduce){body,body *,button,.primary,.secondary{transition:none!important}}

@@ -31,13 +31,11 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 const configuredOrigins = (process.env.CLIENT_ORIGIN || '').split(',').map(v => v.trim()).filter(Boolean);
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (!configuredOrigins.length || configuredOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Origin not allowed by CORS.'));
-  },
-  credentials: true
+app.use(cors((req, callback) => {
+  const requestOrigin = req.header('Origin');
+  const sameOrigin = requestOrigin === `${req.protocol}://${req.get('host')}`;
+  const allowed = !requestOrigin || !configuredOrigins.length || configuredOrigins.includes(requestOrigin) || sameOrigin;
+  callback(null, { origin: allowed, credentials: true });
 }));
 app.use(express.json({ limit: '100kb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));

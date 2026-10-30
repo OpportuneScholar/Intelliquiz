@@ -9,6 +9,8 @@ function showView(view){clearMessage();Object.entries(forms).forEach(([k,f])=>f.
 function withBusy(button,busyText,task){const original=button.innerHTML;button.disabled=true;button.classList.add("is-loading");button.innerHTML='<span class="spinner" aria-hidden="true"></span> '+busyText;return Promise.resolve().then(task).finally(()=>{button.disabled=false;button.classList.remove("is-loading");button.innerHTML=original})}
 function applyTheme(theme){const selected=theme==="light"?"light":"dark";document.documentElement.dataset.theme=selected;document.body.dataset.theme=selected;const b=$("#themeToggle");b.textContent=selected==="light"?"☾ Dark mode":"☀ Light mode";b.setAttribute("aria-pressed",String(selected==="light"))}
 let savedTheme="dark";try{savedTheme=localStorage.getItem("iq_theme")||"dark"}catch(_){}applyTheme(savedTheme);
+const requestedRole=new URLSearchParams(location.search).get("role");
+if(["student","teacher"].includes(requestedRole)) $("#loginForm [name=role]").value=requestedRole;
 $("#themeToggle").addEventListener("click",()=>{const next=document.body.dataset.theme==="light"?"dark":"light";applyTheme(next);try{localStorage.setItem("iq_theme",next)}catch(_){}});
 $("#forgotLink").addEventListener("click",()=>{const email=$("#loginForm [name=email]").value.trim();showView("forgot");$("#forgotForm [name=email]").value=email});
 $("#backToLogin").addEventListener("click",()=>showView("login"));
@@ -45,7 +47,22 @@ async function renderWorkspace(page="overview"){
 function logout(){localStorage.removeItem("iq_token");currentUser=null;$("#dashboard").classList.add("hidden");$("#auth").classList.remove("hidden");showView("login")}
 $("#logout").addEventListener("click",logout);
 $("#refresh").addEventListener("click",()=>{api("/api/auth/me").then(showDashboard).catch(()=>{message("Session expired. Please sign in again.",true);logout()})});
-$("#loginForm").addEventListener("submit",async e=>{e.preventDefault();clearMessage();const f=new FormData(e.currentTarget),b=e.currentTarget.querySelector('[type=submit]');try{await withBusy(b,"Signing in…",async()=>{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({email:f.get("email"),password:f.get("password"),role:f.get("role")})});localStorage.setItem("iq_token",d.token);showDashboard(d)})}catch(err){message(err.message,true)}});
+$("#loginForm").addEventListener("submit",async e=>{
+ e.preventDefault();clearMessage();
+ const form=e.currentTarget,f=new FormData(form),b=form.querySelector('[type=submit]');
+ try{
+  await withBusy(b,"Signing in…",async()=>{
+   const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({email:f.get("email"),password:f.get("password"),role:f.get("role")})});
+   if(!d.token||!d.user)throw new Error("The server response was incomplete. Please try again.");
+   localStorage.setItem("iq_token",d.token);
+   showDashboard(d);
+   const msg=$("#message");if(msg)msg.classList.add("hidden");
+  });
+ }catch(err){
+  message(err.message||"Sign in failed. Check account type, email and password.",true);
+  const msg=$("#message");if(msg){msg.setAttribute("role","alert");msg.scrollIntoView({behavior:"smooth",block:"nearest"});}
+ }
+});
 $("#registerForm").addEventListener("submit",async e=>{e.preventDefault();clearMessage();const body=Object.fromEntries(new FormData(e.currentTarget).entries()),b=e.currentTarget.querySelector('[type=submit]');try{await withBusy(b,"Creating account…",async()=>{const d=await api("/api/auth/register",{method:"POST",body:JSON.stringify(body)});localStorage.setItem("iq_token",d.token);showDashboard(d)})}catch(err){message(err.message,true)}});
 $("#requestOtp").addEventListener("click",async()=>{clearMessage();const f=new FormData(forms.teacher);pendingTeacher={name:f.get("name"),email:f.get("email"),password:f.get("password")};if(!pendingTeacher.name||!pendingTeacher.email||pendingTeacher.password.length<10){message("Enter your name, valid email and a password of at least 10 characters.",true);return}try{await withBusy($("#requestOtp"),"Sending code…",async()=>{const d=await api("/api/teacher-registration/request-otp",{method:"POST",body:JSON.stringify(pendingTeacher)});$("#teacherStepOne").classList.add("hidden");$("#teacherStepTwo").classList.remove("hidden");message(d.message||"Verification code sent.")})}catch(err){message(err.message,true)}});
 $("#verifyOtp").addEventListener("click",async()=>{const otp=$("#otp").value.trim();if(!pendingTeacher||!/^\d{6}$/.test(otp)){message("Enter the 6-digit verification code.",true);return}try{await withBusy($("#verifyOtp"),"Verifying…",async()=>{const d=await api("/api/teacher-registration/verify-otp",{method:"POST",body:JSON.stringify({email:pendingTeacher.email,otp})});showView("login");$("#loginForm [name=email]").value=pendingTeacher.email;$("#loginForm [name=role]").value="teacher";pendingTeacher=null;message(d.message||"Email verified. Please sign in.")})}catch(err){message(err.message,true)}});

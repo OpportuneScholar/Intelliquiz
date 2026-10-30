@@ -65,6 +65,17 @@ router.post('/:id/publish', requireAuth, requireRole('teacher'), async (req, res
 });
 
 
+router.patch('/:id/close', requireAuth, requireRole('teacher'), async (req, res, next) => {
+  try {
+    const exam = await Exam.findOne({ _id: req.params.id, createdBy: req.user._id });
+    if (!exam) return res.status(404).json({ message: 'Exam not found.' });
+    if (exam.status !== 'published') return res.status(409).json({ message: 'Only a published exam can be closed.' });
+    exam.status = 'closed';
+    await exam.save();
+    res.json({ message: 'Exam closed. Students can no longer start it.', exam: examSummary(exam) });
+  } catch (e) { next(e); }
+});
+
 router.post('/:id/start', requireAuth, requireRole('student'), async (req, res, next) => {
   try {
     const exam = await Exam.findOne({ _id: req.params.id, status: 'published' });

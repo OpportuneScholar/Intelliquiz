@@ -7,6 +7,8 @@ const schema = new mongoose.Schema({
   rollNumber: { type: String, trim: true, default: '' },
   course: { type: String, trim: true, default: '' },
   branch: { type: String, trim: true, default: '' },
+  semester: { type: String, trim: true, default: '' },
+  section: { type: String, trim: true, default: '' },
   mobile: { type: String, trim: true, default: '' },
   isActive: { type: Boolean, default: true },
   tokenVersion: { type: Number, default: 0 },

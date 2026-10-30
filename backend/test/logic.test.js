@@ -133,3 +133,14 @@ test('finalize: failure while saving rolls the attempt back to in_progress', asy
   assert.equal(state.attempt.status, 'in_progress');
   require.cache[SubmissionPath].exports.create = original;
 });
+
+
+const { createQuestionOrder, orderQuestions } = require('../services/questionOrder');
+test('question order is shuffled per attempt and stable when persisted', () => {
+  const ids = ['a', 'b', 'c', 'd'];
+  const order = createQuestionOrder(ids, () => 0);
+  assert.deepEqual(order, ['d', 'b', 'a', 'c']);
+  assert.deepEqual(ids, ['a', 'b', 'c', 'd']);
+  const questions = ids.map(_id => ({ _id }));
+  assert.deepEqual(orderQuestions(questions, order).map(q => q._id), order);
+});

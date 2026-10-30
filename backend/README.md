@@ -50,3 +50,10 @@ Create a database user with only the required database access where possible. Ad
 
 ## Current limitations
 Not yet verified against a live Atlas cluster or live Resend account (automated tests cover the logic, not the database/email). Tab-switch detection runs in the browser and cannot stop a determined cheater. Root-level `app.js`, `index.html`, `style.css` outside `backend/public/` are older copies and are not served — `backend/public/` is the live frontend.
+
+
+## Per-student question order
+Each new attempt receives a randomized question sequence. The sequence is stored on the attempt, so refreshing or resuming that attempt preserves the same order. Question numbers are presented sequentially by the frontend (Question 1, Question 2, ...); the answer options remain in their authored A–D order. Grading remains keyed by question ID, so changing display order does not change the answer key or marks.
+
+## Exam audience fields
+Exams now support a subject label and visibility modes: `all` (legacy/default), `class`, `selected`, or `both`. Class targeting can match course, branch, semester, and section; selected targeting uses student user IDs. The server checks eligibility both when listing exams and when opening/starting a shared exam link. Student profiles now include optional semester and section fields; older accounts remain compatible.

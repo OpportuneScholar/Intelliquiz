@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 const schema = new mongoose.Schema({
   title: { type: String, required: true, trim: true, maxlength: 180 },
+  subject: { type: String, trim: true, maxlength: 120, default: '' },
+  visibilityMode: { type: String, enum: ['all', 'class', 'selected', 'both'], default: 'all' },
+  targetClasses: [{ course: String, branch: String, semester: String, section: String }],
+  selectedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   description: { type: String, default: '', maxlength: 3000 },
   durationMinutes: { type: Number, required: true, min: 1, max: 600 },
   maxAttempts: { type: Number, default: 1, min: 1, max: 20 },

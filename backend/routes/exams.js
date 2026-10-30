@@ -6,6 +6,7 @@ const Submission = require('../models/Submission');
 const ExamAttempt = require('../models/ExamAttempt');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { sanitizeAnswers, resultPayload, finalizeAttempt } = require('../services/grading');
+const { createQuestionOrder, orderQuestions } = require('../services/questionOrder');
 
 const activeQuestions = e => (e.questionIds || []).filter(q => q && q.isActive !== false);
 const sumMarks = qs => Math.round(qs.reduce((t, q) => t + (Number(q.marks) > 0 ? Number(q.marks) : 1), 0) * 100) / 100;
@@ -24,9 +25,11 @@ const examSummary = e => {
 const attemptPayload = a => ({ id: String(a._id), answers: a.answers || {}, startedAt: a.startedAt, expiresAt: a.expiresAt });
 
 // Questions sent to a student during an attempt — never includes the answer key.
-async function questionsForStudent(examId) {
+async function questionsForStudent(examId, orderedIds = []) {
   const exam = await Exam.findById(examId).populate({ path: 'questionIds', match: { isActive: true }, select: 'text options marks negativeMarks' });
-  return (exam?.questionIds || []).filter(Boolean).map(q => ({
+  const active = (exam?.questionIds || []).filter(Boolean);
+  const ordered = orderedIds.length ? orderQuestions(active, orderedIds) : active;
+  return ordered.map(q => ({
     id: String(q._id), text: q.text, options: q.options, marks: q.marks ?? 1, negativeMarks: q.negativeMarks ?? 0
   }));
 }
@@ -165,13 +168,17 @@ router.post('/:id/start', requireAuth, requireRole('student'), async (req, res, 
     if (exam.startsAt && exam.startsAt > now) return res.status(403).json({ message: 'This exam has not started yet.' });
     if (exam.endsAt && exam.endsAt <= now) return res.status(403).json({ message: 'This exam has ended.' });
     const active = await ExamAttempt.findOne({ exam: exam._id, student: req.user._id, status: 'in_progress' });
-    if (active) return res.json({ attempt: attemptPayload(active), questions: await questionsForStudent(exam._id), rules: { tabSwitchAutoSubmit: exam.tabSwitchAutoSubmit !== false }, serverTime: now });
+    if (active) {
+      if (!active.questionOrder?.length) { active.questionOrder = createQuestionOrder(exam.questionIds.map(String)); await active.save(); }
+      return res.json({ attempt: attemptPayload(active), questions: await questionsForStudent(exam._id, active.questionOrder), rules: { tabSwitchAutoSubmit: exam.tabSwitchAutoSubmit !== false }, serverTime: now });
+    }
     const count = await ExamAttempt.countDocuments({ exam: exam._id, student: req.user._id });
     if (count >= exam.maxAttempts) return res.status(409).json({ message: 'You have used all attempts for this exam.' });
     const expiresAt = new Date(now.getTime() + exam.durationMinutes * 60000);
     if (exam.endsAt && exam.endsAt < expiresAt) expiresAt.setTime(exam.endsAt.getTime());
-    const attempt = await ExamAttempt.create({ exam: exam._id, student: req.user._id, attemptNumber: count + 1, startedAt: now, expiresAt });
-    res.status(201).json({ attempt: attemptPayload(attempt), questions: await questionsForStudent(exam._id), rules: { tabSwitchAutoSubmit: exam.tabSwitchAutoSubmit !== false }, serverTime: now });
+    const questionOrder = createQuestionOrder(exam.questionIds.map(String));
+    const attempt = await ExamAttempt.create({ exam: exam._id, student: req.user._id, attemptNumber: count + 1, startedAt: now, expiresAt, questionOrder });
+    res.status(201).json({ attempt: attemptPayload(attempt), questions: await questionsForStudent(exam._id, questionOrder), rules: { tabSwitchAutoSubmit: exam.tabSwitchAutoSubmit !== false }, serverTime: now });
   } catch (e) {
     if (e.code === 11000) return res.status(409).json({ message: 'An attempt is already being started. Refresh and continue it.' });
     next(e);
@@ -183,7 +190,12 @@ router.get('/:id/attempt/active', requireAuth, requireRole('student'), async (re
     await closeExpiredAttempts(req.params.id, req.user._id);
     const attempt = await ExamAttempt.findOne({ exam: req.params.id, student: req.user._id, status: 'in_progress' });
     if (!attempt) return res.status(404).json({ message: 'No active attempt.' });
-    res.json({ attempt: attemptPayload(attempt), questions: await questionsForStudent(req.params.id), serverTime: new Date() });
+    if (!attempt.questionOrder?.length) {
+      const exam = await Exam.findById(req.params.id).select('questionIds');
+      attempt.questionOrder = createQuestionOrder(exam.questionIds.map(String));
+      await attempt.save();
+    }
+    res.json({ attempt: attemptPayload(attempt), questions: await questionsForStudent(req.params.id, attempt.questionOrder), serverTime: new Date() });
   } catch (e) { next(e); }
 });
 

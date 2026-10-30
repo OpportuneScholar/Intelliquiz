@@ -7,6 +7,7 @@ const ExamAttempt = require('../models/ExamAttempt');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { sanitizeAnswers, resultPayload, finalizeAttempt } = require('../services/grading');
 const { createQuestionOrder, orderQuestions } = require('../services/questionOrder');
+const { createQuestionOrder, orderQuestions } = require('../services/questionOrder');
 
 const activeQuestions = e => (e.questionIds || []).filter(q => q && q.isActive !== false);
 const sumMarks = qs => Math.round(qs.reduce((t, q) => t + (Number(q.marks) > 0 ? Number(q.marks) : 1), 0) * 100) / 100;

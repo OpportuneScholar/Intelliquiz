@@ -73,8 +73,7 @@ router.post('/:id/start', requireAuth, requireRole('student'), async (req, res, 
     if ((exam.startsAt && exam.startsAt > now) || (exam.endsAt && exam.endsAt <= now))
       return res.status(403).json({ message: 'This exam is not currently available.' });
     const active = await ExamAttempt.findOne({ exam: exam._id, student: req.user._id, status: 'in_progress' });
-    if (active && active.expiresAt > now) return res.json({ attempt: { id: String(active._id), answers: active.answers, startedAt: active.startedAt, expiresAt: active.expiresAt } });
-    if (active) { active.status = 'expired'; await active.save(); }
+    if (active) return res.json({ attempt: { id: String(active._id), answers: active.answers, startedAt: active.startedAt, expiresAt: active.expiresAt } });
     const count = await ExamAttempt.countDocuments({ exam: exam._id, student: req.user._id });
     if (count >= exam.maxAttempts) return res.status(409).json({ message: 'Maximum attempts reached.' });
     const expiresAt = new Date(now.getTime() + exam.durationMinutes * 60000);
@@ -91,7 +90,6 @@ router.get('/:id/attempt/active', requireAuth, requireRole('student'), async (re
   try {
     const attempt = await ExamAttempt.findOne({ exam: req.params.id, student: req.user._id, status: 'in_progress' });
     if (!attempt) return res.status(404).json({ message: 'No active attempt.' });
-    if (attempt.expiresAt <= Date.now()) { attempt.status = 'expired'; await attempt.save(); return res.status(410).json({ message: 'Exam time has expired.' }); }
     res.json({ attempt: { id: String(attempt._id), answers: attempt.answers, startedAt: attempt.startedAt, expiresAt: attempt.expiresAt } });
   } catch (e) { next(e); }
 });
@@ -100,7 +98,7 @@ router.patch('/:id/attempt/:attemptId', requireAuth, requireRole('student'), asy
   try {
     const attempt = await ExamAttempt.findOne({ _id: req.params.attemptId, exam: req.params.id, student: req.user._id, status: 'in_progress' });
     if (!attempt) return res.status(404).json({ message: 'Active attempt not found.' });
-    if (attempt.expiresAt <= Date.now()) { attempt.status = 'expired'; await attempt.save(); return res.status(410).json({ message: 'Exam time has expired.' }); }
+    if (attempt.expiresAt <= Date.now()) return res.status(410).json({ message: 'Exam time has expired. Submit the saved answers.' });
     const exam = await Exam.findById(attempt.exam).select('questionIds');
     const allowed = new Set(exam.questionIds.map(String));
     const incoming = req.body?.answers;

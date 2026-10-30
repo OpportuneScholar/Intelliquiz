@@ -68,32 +68,64 @@ $("#requestOtp").addEventListener("click",async()=>{clearMessage();const f=new F
 $("#verifyOtp").addEventListener("click",async()=>{const otp=$("#otp").value.trim();if(!pendingTeacher||!/^\d{6}$/.test(otp)){message("Enter the 6-digit verification code.",true);return}try{await withBusy($("#verifyOtp"),"Verifying…",async()=>{const d=await api("/api/teacher-registration/verify-otp",{method:"POST",body:JSON.stringify({email:pendingTeacher.email,otp})});showView("login");$("#loginForm [name=email]").value=pendingTeacher.email;$("#loginForm [name=role]").value="teacher";pendingTeacher=null;message(d.message||"Email verified. Please sign in.")})}catch(err){message(err.message,true)}});
 $("#forgotForm").addEventListener("submit",async e=>{e.preventDefault();const email=new FormData(e.currentTarget).get("email"),b=e.currentTarget.querySelector('[type=submit]');try{await withBusy(b,"Sending link…",async()=>{const d=await api("/api/auth/forgot-password",{method:"POST",body:JSON.stringify({email})});message(d.message||"If an account exists, a reset link will be sent.")})}catch(err){message(err.message,true)}});
 $("#resetForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.currentTarget),form=e.currentTarget;if(f.get("password")!==f.get("confirmPassword"))return message("Passwords do not match.",true);try{await withBusy(form.querySelector('[type=submit]'),"Updating…",async()=>{const d=await api("/api/auth/reset-password",{method:"POST",body:JSON.stringify({email:form.dataset.email,token:form.dataset.token,password:f.get("password")})});history.replaceState({},document.title,location.pathname);showView("login");$("#loginForm [name=email]").value=form.dataset.email;message(d.message||"Password updated.")})}catch(err){message(err.message,true)}});
+
+function workspaceNotice(text,isError=false){
+ const root=$("#dashboardContent");if(!root)return;
+ let box=$("#iq-action-notice");
+ if(!box){box=document.createElement("div");box.id="iq-action-notice";box.className="iq-action-notice";root.prepend(box)}
+ box.textContent=text;box.classList.toggle("error",isError);box.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
 window.__iqNavigate=(page)=>renderWorkspace(page);
-document.addEventListener("click",e=>{
- const target=e.target instanceof Element?e.target:null;
- const nav=target?.closest("[data-page]");
- if(!nav)return;
- e.preventDefault();
- e.stopImmediatePropagation();
- window.__iqNavigate(nav.dataset.page);
+document.addEventListener("click",async e=>{
+ const target=e.target instanceof Element?e.target:null;if(!target)return;
+ const nav=target.closest("[data-page]");
+ if(nav){e.preventDefault();e.stopImmediatePropagation();await renderWorkspace(nav.dataset.page);return}
+ const edit=target.closest("[data-edit-question]")?.dataset.editQuestion;
+ if(edit){e.preventDefault();e.stopImmediatePropagation();const q=dashCache.questions.find(x=>x.id===edit),form=$("#addQuestionForm");if(q&&form){form.elements.questionId.value=q.id;form.elements.text.value=q.text;q.options.forEach((v,i)=>form.elements["option"+String.fromCharCode(65+i)].value=v);form.elements.correctOption.value=q.correctOption;$("#questionFormTitle").textContent="Edit question";$("#saveQuestionButton").textContent="Update question";$("#cancelQuestionEdit").hidden=false;form.scrollIntoView({behavior:"smooth",block:"start"})}return}
+ if(target.closest("[data-cancel-question]")){e.preventDefault();e.stopImmediatePropagation();const form=$("#addQuestionForm");if(form){form.reset();form.elements.questionId.value="";$("#questionFormTitle").textContent="Add a question";$("#saveQuestionButton").textContent="Save question";$("#cancelQuestionEdit").hidden=true}return}
+ const del=target.closest("[data-delete-question]")?.dataset.deleteQuestion;
+ if(del){e.preventDefault();e.stopImmediatePropagation();if(!confirm("Delete this question from your question bank?"))return;try{await api("/api/questions/"+encodeURIComponent(del),{method:"DELETE"});await renderWorkspace("questions");workspaceNotice("Question deleted successfully.")}catch(err){workspaceNotice(err.message,true)}return}
+ const pub=target.closest("[data-publish]")?.dataset.publish;
+ if(pub){e.preventDefault();e.stopImmediatePropagation();try{await api("/api/exams/"+encodeURIComponent(pub)+"/publish",{method:"POST",body:"{}"});await renderWorkspace("exams");workspaceNotice("Exam published. You can now copy and share its link.")}catch(err){workspaceNotice(err.message,true)}return}
+ const closeId=target.closest("[data-close-exam]")?.dataset.closeExam;
+ if(closeId){e.preventDefault();e.stopImmediatePropagation();if(!confirm("Close this exam? Students will no longer be able to start it."))return;try{await api("/api/exams/"+encodeURIComponent(closeId)+"/close",{method:"PATCH",body:"{}"});await renderWorkspace("exams");workspaceNotice("Exam closed.")}catch(err){workspaceNotice(err.message,true)}return}
+ const copy=target.closest("[data-copy]")?.dataset.copy;
+ if(copy){e.preventDefault();e.stopImmediatePropagation();try{await navigator.clipboard.writeText(copy);workspaceNotice("Exam link copied.")}catch(_){workspaceNotice("Copy this link: "+copy,true)}return}
+ const resultId=target.closest("[data-results]")?.dataset.results;
+ if(resultId){e.preventDefault();e.stopImmediatePropagation();try{const d=await api("/api/exams/"+encodeURIComponent(resultId)+"/results");const slot=$("#results-"+resultId);if(!slot)throw new Error("Results area is not available. Refresh the page.");slot.innerHTML='<div class="iq-results"><h4>Student submissions ('+d.results.length+')</h4>'+(d.results.length?d.results.map(x=>'<div class="iq-result-row"><span><b>'+esc(x.student)+'</b><small>'+esc(x.email)+' · '+esc(x.rollNumber)+'</small></span><strong>'+x.score+'/'+x.totalQuestions+' ('+x.percentage+'%)</strong></div>').join(""):'<p class="muted">No submissions yet.</p>')+'</div>';workspaceNotice("Results loaded.")}catch(err){workspaceNotice(err.message,true)}return}
+ const exportId=target.closest("[data-export-results]")?.dataset.exportResults;
+ if(exportId){e.preventDefault();e.stopImmediatePropagation();try{const d=await api("/api/exams/"+encodeURIComponent(exportId)+"/results");const rows=[["Student","Email","Roll number","Score","Total questions","Percentage","Duration seconds","Submitted at"],...d.results.map(x=>[x.student,x.email,x.rollNumber,x.score,x.totalQuestions,x.percentage,x.durationSeconds,x.submittedAt])];const csv=rows.map(row=>row.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");const blob=new Blob(["\uFEFF",csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="intelliquiz-results-"+exportId+".csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);workspaceNotice("Results CSV downloaded.")}catch(err){workspaceNotice(err.message,true)}return}
+ const examToken=target.closest("[data-start-exam]")?.dataset.startExam;
+ if(examToken){e.preventDefault();e.stopImmediatePropagation();location.href="/exam/"+encodeURIComponent(examToken)}
 },true);
-const root=$("#dashboardContent");
-if(root)root.addEventListener("click",async e=>{
- const page=e.target.closest("[data-page]")?.dataset.page;if(page){renderWorkspace(page);return}
- const edit=e.target.closest("[data-edit-question]")?.dataset.editQuestion;if(edit){const q=dashCache.questions.find(x=>x.id===edit),form=$("#addQuestionForm");if(q&&form){form.elements.questionId.value=q.id;form.elements.text.value=q.text;q.options.forEach((v,i)=>form.elements["option"+String.fromCharCode(65+i)].value=v);form.elements.correctOption.value=q.correctOption;$("#questionFormTitle").textContent="Edit question";$("#saveQuestionButton").textContent="Update question";$("#cancelQuestionEdit").hidden=false;form.scrollIntoView({behavior:"smooth",block:"start"});}return}
- const cancelEdit=e.target.closest("[data-cancel-question]");if(cancelEdit){const form=$("#addQuestionForm");form.reset();form.elements.questionId.value="";$("#questionFormTitle").textContent="Add a question";$("#saveQuestionButton").textContent="Save question";cancelEdit.hidden=true;return}
- const closeId=e.target.closest("[data-close-exam]")?.dataset.closeExam;if(closeId&&confirm("Close this exam? Students will no longer be able to start it.")){try{await api("/api/exams/"+closeId+"/close",{method:"PATCH",body:"{}"});await renderWorkspace("exams")}catch(err){alert(err.message)}return}
- const exportId=e.target.closest("[data-export-results]")?.dataset.exportResults;if(exportId){try{const d=await api("/api/exams/"+exportId+"/results");const rows=[["Student","Email","Roll number","Score","Total questions","Percentage","Duration seconds","Submitted at"],...d.results.map(x=>[x.student,x.email,x.rollNumber,x.score,x.totalQuestions,x.percentage,x.durationSeconds,x.submittedAt])];const csv=rows.map(row=>row.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");const blob=new Blob(["\uFEFF",csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="intelliquiz-results-"+exportId+".csv";a.click();URL.revokeObjectURL(url)}catch(err){alert(err.message)}return}
- const del=e.target.closest("[data-delete-question]")?.dataset.deleteQuestion;if(del&&confirm("Delete this question from your question bank?")){try{await api("/api/questions/"+del,{method:"DELETE"});renderWorkspace("questions")}catch(err){alert(err.message)}return}
- const pub=e.target.closest("[data-publish]")?.dataset.publish;if(pub){try{await api("/api/exams/"+pub+"/publish",{method:"POST",body:"{}"});renderWorkspace("exams")}catch(err){alert(err.message)}return}
- const copy=e.target.closest("[data-copy]")?.dataset.copy;if(copy){try{await navigator.clipboard.writeText(copy);e.target.textContent="Copied"}catch(_){alert("Copy this link: "+copy)}return}
- const resultId=e.target.closest("[data-results]")?.dataset.results;if(resultId){try{const d=await api("/api/exams/"+resultId+"/results");const slot=$("#results-"+resultId);slot.innerHTML='<div class="iq-results"><h4>Student submissions ('+d.results.length+')</h4>'+(d.results.length?d.results.map(r=>'<div class="iq-result-row"><span><b>'+esc(r.student)+'</b><small>'+esc(r.email)+' · '+esc(r.rollNumber)+'</small></span><strong>'+r.score+'/'+r.totalQuestions+' ('+r.percentage+'%)</strong></div>').join(""):'<p class="muted">No submissions yet.</p>')+'</div>'}catch(err){alert(err.message)}return}
- const token=e.target.closest("[data-start-exam]")?.dataset.startExam;if(token){location.href="/exam/"+encodeURIComponent(token)}
-});
-if(root)root.addEventListener("submit",async e=>{
- if(e.target.id==="addQuestionForm"){e.preventDefault();const f=new FormData(e.target);const options=["A","B","C","D"].map(x=>f.get("option"+x));const id=f.get("questionId");try{await api(id?"/api/questions/"+id:"/api/questions",{method:id?"PATCH":"POST",body:JSON.stringify({text:f.get("text"),options,correctOption:f.get("correctOption")})});await renderWorkspace("questions")}catch(err){alert(err.message)}}
- if(e.target.id==="createExamForm"){e.preventDefault();const f=new FormData(e.target),questionIds=f.getAll("questionIds");if(!questionIds.length)return alert("Select at least one question.");const body={title:f.get("title"),description:f.get("description"),durationMinutes:Number(f.get("durationMinutes")),maxAttempts:Number(f.get("maxAttempts")),questionIds,startsAt:f.get("startsAt")?new Date(f.get("startsAt")).toISOString():null,endsAt:f.get("endsAt")?new Date(f.get("endsAt")).toISOString():null};try{await api("/api/exams",{method:"POST",body:JSON.stringify(body)});renderWorkspace("exams")}catch(err){alert(err.message)}}
-});
+document.addEventListener("submit",async e=>{
+ const form=e.target;if(!(form instanceof HTMLFormElement))return;
+ if(form.id!=="addQuestionForm"&&form.id!=="createExamForm")return;
+ e.preventDefault();e.stopImmediatePropagation();
+ const button=form.querySelector('[type="submit"]');
+ try{
+  await withBusy(button,form.id==="addQuestionForm"?"Saving question…":"Creating exam…",async()=>{
+   const f=new FormData(form);
+   if(form.id==="addQuestionForm"){
+    const options=["A","B","C","D"].map(x=>String(f.get("option"+x)||"").trim());
+    if(options.some(x=>!x))throw new Error("Please fill all four options.");
+    const id=String(f.get("questionId")||"");
+    await api(id?"/api/questions/"+encodeURIComponent(id):"/api/questions",{method:id?"PATCH":"POST",body:JSON.stringify({text:String(f.get("text")||"").trim(),options,correctOption:f.get("correctOption")})});
+    await renderWorkspace("questions");workspaceNotice(id?"Question updated successfully.":"Question added successfully.");
+   }else{
+    const questionIds=f.getAll("questionIds");
+    if(!questionIds.length)throw new Error("Select at least one question before creating the exam.");
+    const startRaw=String(f.get("startsAt")||""),endRaw=String(f.get("endsAt")||"");
+    const start=startRaw?new Date(startRaw):null,end=endRaw?new Date(endRaw):null;
+    if((start&&!Number.isFinite(start.getTime()))||(end&&!Number.isFinite(end.getTime())))throw new Error("Please enter valid exam dates.");
+    if(start&&end&&end<=start)throw new Error("Exam end time must be after its start time.");
+    const body={title:String(f.get("title")||"").trim(),description:String(f.get("description")||""),durationMinutes:Number(f.get("durationMinutes")),maxAttempts:Number(f.get("maxAttempts")),questionIds,startsAt:start?start.toISOString():null,endsAt:end?end.toISOString():null};
+    await api("/api/exams",{method:"POST",body:JSON.stringify(body)});
+    await renderWorkspace("exams");workspaceNotice("Exam saved as draft. Open Manage exams to publish and share it.");
+   }
+  });
+ }catch(err){workspaceNotice(err.message||"The action could not be completed.",true)}
+},true);
 async function loadExamPage(token){
  $("#auth").classList.add("hidden");$("#dashboard").classList.remove("hidden");$("#dashboardContent").innerHTML='<div class="iq-panel"><p class="muted">Loading secure exam session…</p></div>';
  try{

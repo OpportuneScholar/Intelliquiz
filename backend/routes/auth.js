@@ -43,8 +43,11 @@ router.post('/login', async (req, res, next) => {
   try {
     const { email, password, role } = req.body || {};
     if (typeof email !== 'string' || typeof password !== 'string' || !['student', 'teacher'].includes(role)) return res.status(400).json({ message: 'Email, password and a valid role are required.' });
-    const u = await User.findOne({ email: email.toLowerCase().trim(), role, isActive: true });
-    if (!u || !(await bcrypt.compare(password, u.passwordHash))) return res.status(401).json({ message: 'Email or password is incorrect.' });
+    const normalizedEmail = email.toLowerCase().trim();
+    const u = await User.findOne({ email: normalizedEmail, isActive: true });
+    if (!u) return res.status(401).json({ message: 'No active account was found for this email address.' });
+    if (u.role !== role) return res.status(403).json({ message: 'This email is registered as a ' + u.role + ' account. Select ' + (u.role === 'teacher' ? 'Teacher' : 'Student') + ' in Account type.' });
+    if (!(await bcrypt.compare(password, u.passwordHash))) return res.status(401).json({ message: 'Password is incorrect. If you just reset it, use the newest password and try again.' });
     res.json({ token: token(u), user: publicUser(u) });
   } catch (e) { next(e); }
 });

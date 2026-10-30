@@ -8,12 +8,14 @@ const rateLimit = require('express-rate-limit');
 const { connectDatabase, mongoose } = require('./db/pool');
 const User = require('./models/User');
 const Question = require('./models/Question');
+const Exam = require('./models/Exam');
 const Submission = require('./models/Submission');
 const authRoutes = require('./routes/auth');
 const teacherRegistrationRoutes = require('./routes/teacherRegistration');
 const questionRoutes = require('./routes/questions');
 const examRoutes = require('./routes/exams');
 const { requireAuth, requireRole } = require('./middleware/auth');
+const { sweepExpiredAttempts } = require('./services/grading');
 const app = express();
 const publicDir = path.join(__dirname, 'public');
 app.disable('x-powered-by');
@@ -27,7 +29,8 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      imgSrc: ["'self'", "data:"], connectSrc: ["'self'"]
+      imgSrc: ["'self'", "data:"], connectSrc: ["'self'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
     }
   },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
@@ -50,10 +53,11 @@ app.use('/api/exams', rateLimit({ windowMs: 900000, limit: 300, standardHeaders:
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'IntelliQuiz API', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' }));
 app.get('/api/dashboard/summary', requireAuth, requireRole('teacher'), async (req, res, next) => {
   try {
+    const examIds = await Exam.find({ createdBy: req.user._id }).distinct('_id');
     const [students, questions, attempts] = await Promise.all([
       User.countDocuments({ role: 'student', isActive: true }),
       Question.countDocuments({ isActive: true, createdBy: req.user._id }),
-      Submission.countDocuments({ exam: { $in: await require('./models/Exam').find({ createdBy: req.user._id }).distinct('_id') } })
+      Submission.countDocuments({ exam: { $in: examIds } })
     ]);
     res.json({ students, questions, attempts });
   } catch (error) { next(error); }
@@ -72,6 +76,9 @@ const port = Number(process.env.PORT || 5000);
 async function start() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Error('Set JWT_SECRET of at least 32 characters.');
   await connectDatabase();
+  // Auto-submit attempts whose timer ended but whose student never came back (closed tab, lost network).
+  const sweeper = setInterval(() => sweepExpiredAttempts().catch(error => console.error('Expiry sweep failed:', error.message)), 30000);
+  sweeper.unref();
   app.listen(port, '0.0.0.0', () => console.log('IntelliQuiz full-stack app listening on port ' + port));
 }
 if (require.main === module) start().catch(error => { console.error('Startup failed:', error.message); process.exit(1); });

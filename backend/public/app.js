@@ -103,4 +103,4 @@ async function loadExamPage(token){
 const pathMatch=location.pathname.match(/^\/exam\/([^/]+)/);
 const token=localStorage.getItem("iq_token");
 if(pathMatch){if(token)loadExamPage(decodeURIComponent(pathMatch[1]));else{showView("login");message("Please sign in with your student account to attempt this exam.",true)}}
-else if(token&&!resetToken)api("/api/auth/me").then(showDashboard).catch(()=>localStorage.removeItem("iq_token"));
+else if(token&&!resetToken)api("/api/auth/me").then(showDashboard).catch(err=>{localStorage.removeItem("iq_token");message("Session verification failed: "+(err.message||"Please sign in again."),true);});

@@ -68,6 +68,15 @@ $("#requestOtp").addEventListener("click",async()=>{clearMessage();const f=new F
 $("#verifyOtp").addEventListener("click",async()=>{const otp=$("#otp").value.trim();if(!pendingTeacher||!/^\d{6}$/.test(otp)){message("Enter the 6-digit verification code.",true);return}try{await withBusy($("#verifyOtp"),"Verifying…",async()=>{const d=await api("/api/teacher-registration/verify-otp",{method:"POST",body:JSON.stringify({email:pendingTeacher.email,otp})});showView("login");$("#loginForm [name=email]").value=pendingTeacher.email;$("#loginForm [name=role]").value="teacher";pendingTeacher=null;message(d.message||"Email verified. Please sign in.")})}catch(err){message(err.message,true)}});
 $("#forgotForm").addEventListener("submit",async e=>{e.preventDefault();const email=new FormData(e.currentTarget).get("email"),b=e.currentTarget.querySelector('[type=submit]');try{await withBusy(b,"Sending link…",async()=>{const d=await api("/api/auth/forgot-password",{method:"POST",body:JSON.stringify({email})});message(d.message||"If an account exists, a reset link will be sent.")})}catch(err){message(err.message,true)}});
 $("#resetForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.currentTarget),form=e.currentTarget;if(f.get("password")!==f.get("confirmPassword"))return message("Passwords do not match.",true);try{await withBusy(form.querySelector('[type=submit]'),"Updating…",async()=>{const d=await api("/api/auth/reset-password",{method:"POST",body:JSON.stringify({email:form.dataset.email,token:form.dataset.token,password:f.get("password")})});history.replaceState({},document.title,location.pathname);showView("login");$("#loginForm [name=email]").value=form.dataset.email;message(d.message||"Password updated.")})}catch(err){message(err.message,true)}});
+window.__iqNavigate=(page)=>renderWorkspace(page);
+document.addEventListener("click",e=>{
+ const target=e.target instanceof Element?e.target:null;
+ const nav=target?.closest("[data-page]");
+ if(!nav)return;
+ e.preventDefault();
+ e.stopImmediatePropagation();
+ window.__iqNavigate(nav.dataset.page);
+},true);
 const root=$("#dashboardContent");
 if(root)root.addEventListener("click",async e=>{
  const page=e.target.closest("[data-page]")?.dataset.page;if(page){renderWorkspace(page);return}

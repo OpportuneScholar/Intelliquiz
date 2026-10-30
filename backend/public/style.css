@@ -135,3 +135,9 @@ body[data-theme="light"] .iq-share input { background:#f8faff; color:#17243c; }
   .iq-question .iq-actions button { flex:1; }
   .iq-share input { width:100%; }
 }
+
+
+.iq-action-notice{position:sticky;top:8px;z-index:5;margin:0 0 14px;padding:12px 15px;border:1px solid #65dfb055;border-radius:11px;background:#65dfb018;color:var(--text);font:600 13px 'DM Sans';line-height:1.5}
+.iq-action-notice.error{border-color:#ff647577;background:#ff64751a;color:#ffb8c1}
+body[data-theme="light"] .iq-action-notice{color:#145b4b;background:#e8f7f1;border-color:#a8dfc8}
+body[data-theme="light"] .iq-action-notice.error{color:#8f1d2b;background:#fff0f1;border-color:#e9a4ad}

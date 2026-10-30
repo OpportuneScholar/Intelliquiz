@@ -3,6 +3,7 @@ const Question = require('../models/Question');
 const Exam = require('../models/Exam');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { validateQuestion, RULES } = require('../services/questionRules');
+const { extractQuestions } = require('../services/questionImport');
 router.use(requireAuth);
 
 const toJson = q => ({
@@ -15,6 +16,25 @@ const sameText = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 // The rules the question form enforces (the UI shows these to the teacher).
 router.get('/rules', requireRole('teacher'), (_req, res) => res.json({ rules: RULES }));
+
+
+const MAX_IMPORT_BYTES=10*1024*1024;
+router.post('/import/preview',requireRole('teacher'),async(req,res,next)=>{try{
+ const {fileName,fileBase64}=req.body||{};if(typeof fileName!=='string'||typeof fileBase64!=='string')return res.status(400).json({message:'Choose a supported file first.'});
+ const buffer=Buffer.from(fileBase64,'base64');if(!buffer.length||buffer.length>MAX_IMPORT_BYTES)return res.status(413).json({message:'File must be 1 byte to 10 MB.'});
+ const parsed=await extractQuestions(fileName,buffer),questions=[],errors=[...(parsed.errors||[])];
+ for(let i=0;i<parsed.questions.length;i++){const v=validateQuestion(parsed.questions[i]);if(v.error)errors.push({index:i+1,message:v.error});else questions.push(v.value);}
+ const mine=await Question.find({createdBy:req.user._id,isActive:true}).select('text').lean(),seen=new Set(mine.map(q=>q.text.trim().toLowerCase())),unique=[];
+ for(const q of questions){const k=q.text.toLowerCase();if(seen.has(k))errors.push({message:'Duplicate question skipped: '+q.text.slice(0,100)});else{seen.add(k);unique.push(q);}}
+ res.json({questions:unique,errors,detectedCount:parsed.questions.length,importableCount:unique.length,format:parsed.format});
+}catch(e){next(e);}});
+router.post('/import',requireRole('teacher'),async(req,res,next)=>{try{
+ const input=Array.isArray(req.body?.questions)?req.body.questions:[];if(!input.length||input.length>200)return res.status(400).json({message:'Select 1 to 200 valid questions.'});
+ const mine=await Question.find({createdBy:req.user._id,isActive:true}).select('text').lean(),seen=new Set(mine.map(q=>q.text.trim().toLowerCase())),docs=[];
+ for(const raw of input){const v=validateQuestion(raw);if(v.error)return res.status(400).json({message:'Import stopped: '+v.error});const k=v.value.text.toLowerCase();if(!seen.has(k)){seen.add(k);docs.push({...v.value,createdBy:req.user._id});}}
+ if(!docs.length)return res.status(409).json({message:'All selected questions already exist.'});
+ const created=await Question.insertMany(docs,{ordered:false});res.status(201).json({imported:created.length,message:created.length+' questions imported successfully.'});
+}catch(e){next(e);}});
 
 router.get('/', requireRole('teacher'), async (req, res, next) => {
   try {

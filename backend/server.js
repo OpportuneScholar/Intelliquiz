@@ -44,7 +44,7 @@ app.use(cors((req, callback) => {
   callback(null, { origin: allowed, credentials: true });
 }));
 app.use((req, res, next) => { if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store'); next(); });
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '14mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/api/auth', rateLimit({ windowMs: 900000, limit: 60, standardHeaders: 'draft-7', legacyHeaders: false }), authRoutes);
 app.use('/api/teacher-registration', rateLimit({ windowMs: 900000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false }), teacherRegistrationRoutes);

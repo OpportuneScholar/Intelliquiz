@@ -55,7 +55,7 @@
       if(!result.token||!result.user)throw new Error("Server returned an incomplete sign-in response.");
       localStorage.setItem("iq_token",result.token);
       history.replaceState({},document.title,location.pathname);
-      location.reload();
+      if(typeof window.showDashboard==="function"){window.showDashboard(result);}else{throw new Error("Login succeeded, but the dashboard script did not initialize. Refresh the page and try again.");}
     }).catch(function(error){
       if(message){message.textContent=error.message||"Unable to sign in. Please try again.";message.className="message error";message.setAttribute("role","alert");}
       if(button){button.disabled=false;button.innerHTML=original;}

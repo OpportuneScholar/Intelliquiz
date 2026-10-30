@@ -239,9 +239,14 @@ $('#logout').addEventListener('click', () => {
 });
 
 function shell(content, nav, role) {
-  return '<div class="iq-shell"><aside class="iq-side"><div class="iq-side-brand">INTELLIQUIZ <small>' + role + ' PORTAL</small></div>' + nav + '</aside><section class="iq-main">' + content + '</section></div>';
+  const initials = String(currentUser?.name || 'U').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+  return '<div class="iq-workspace"><header class="iq-appbar"><button type="button" class="iq-menu-toggle" id="iqMenuToggle" aria-label="Open navigation" aria-expanded="false">☰</button><a class="iq-app-brand" href="/"><img src="/logo.svg?v=20261031b" alt=""><span><b>IntelliQuiz</b><small>'+role+' WORKSPACE</small></span></a><div class="iq-account-wrap"><button type="button" class="iq-account" id="iqAccountToggle" aria-expanded="false"><span class="iq-avatar">'+esc(initials)+'</span><span class="iq-account-meta"><b>'+esc(currentUser?.name||'Account')+'</b><small>'+esc(currentUser?.role||'')+' · ID '+esc(currentUser?.id||'—')+'</small></span><span>⌄</span></button><div class="iq-account-menu hidden" id="iqAccountMenu"><button type="button" data-page="profile">Profile management</button><button type="button" id="iqMenuLogout">Sign out</button></div></div></header><div class="iq-shell"><aside class="iq-side" id="iqSidebar"><div class="iq-side-brand">WORKSPACE MENU <small>'+role+' PORTAL</small></div>'+nav+'</aside><button class="iq-sidebar-scrim" id="iqSidebarScrim" aria-label="Close menu"></button><section class="iq-main">'+content+'</section></div></div>';
 }
 const navButton = (id, label, active) => '<button class="iq-nav ' + (active ? 'active' : '') + '" data-page="' + id + '">' + label + '</button>';
+function profileHtml() {
+  const u=currentUser||{};
+  return '<div class="iq-page-head"><div><span class="eyebrow">ACCOUNT SETTINGS</span><h2>Profile management</h2><p class="muted">Update your account details. Email and account ID cannot be edited here.</p></div></div><div class="iq-panel"><form id="profileForm" class="iq-form"><div class="iq-profile-id"><span class="iq-avatar large">'+esc(String(u.name||'U').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())+'</span><div><b>'+esc(u.name||'')+'</b><small>'+esc(u.role||'')+' account · '+esc(u.id||'')+'</small></div></div><label>Full name<input name="name" required maxlength="120" value="'+esc(u.name||'')+'"></label><label>Email address<input value="'+esc(u.email||'')+'" disabled></label>'+(u.role==='student'?'<label>Roll number<input value="'+esc(u.rollNumber||'')+'" disabled></label><div class="iq-options"><label>Course<input name="course" maxlength="80" value="'+esc(u.course||'')+'"></label><label>Branch<input name="branch" maxlength="80" value="'+esc(u.branch||'')+'"></label></div>':'')+'<label>Mobile number<input name="mobile" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" value="'+esc(u.mobile||'')+'"></label><button class="primary" type="submit">Save profile changes</button></form></div>';
+}
 function workspaceNotice(text, isError = false) {
   const root = $('#dashboardContent');
   if (!root) return;
@@ -329,7 +334,7 @@ async function renderWorkspace(page = 'overview') {
     if (currentUser.role === 'teacher') {
       const [summary, qs, es] = await Promise.all([api('/api/dashboard/summary'), api('/api/questions'), api('/api/exams')]);
       dashCache = { questions: qs.questions || [], exams: es.exams || [], results: [] };
-      const nav = navButton('overview', 'Overview', page === 'overview') + navButton('questions', 'Question bank', page === 'questions') + navButton('create-exam', 'Create exam', page === 'create-exam') + navButton('exams', 'Manage exams', page === 'exams');
+      const nav = navButton('overview', 'Overview', page === 'overview') + navButton('questions', 'Question bank', page === 'questions') + navButton('create-exam', 'Create exam', page === 'create-exam') + navButton('exams', 'Manage exams', page === 'exams') + navButton('profile', 'Profile management', page === 'profile');
       let content = '';
       if (page === 'overview') {
         content = '<div class="iq-page-head"><div><span class="eyebrow">TEACHER CONSOLE</span><h2>Teaching overview</h2><p class="muted">Create assessments, organise questions and review student performance.</p></div><button class="primary iq-small" data-page="create-exam">＋ Create exam</button></div>' +
@@ -340,6 +345,7 @@ async function renderWorkspace(page = 'overview') {
           '<div class="iq-panel"><h3 id="questionFormTitle">Add a question</h3>' + QUESTION_RULES_HTML + questionFormHtml() + '</div>' +
           '<div class="iq-panel iq-import-panel"><h3>Import questions in bulk</h3><p class="iq-muted">Upload PDF, DOCX, TXT, CSV or JSON. Review the extracted questions before saving. Text-based PDFs are supported; scanned PDFs need OCR.</p><label>Choose file<input id="questionImportFile" type="file" accept=".pdf,.docx,.txt,.csv,.json"></label><div class="iq-actions"><button type="button" class="secondary" id="previewQuestionImport">Analyse file &amp; preview</button></div><div id="questionImportStatus" class="iq-muted" aria-live="polite"></div><div id="questionImportPreview"></div></div>' +
           '<div class="iq-panel"><h3>Your questions (' + dashCache.questions.length + ')</h3>' + (dashCache.questions.length ? dashCache.questions.map(questionCardHtml).join('') : '<p class="muted">No questions yet. Add your first question above.</p>') + '</div>';
+      } else if (page === 'profile') { content = profileHtml();
       } else if (page === 'create-exam') {
         content = createExamHtml();
       } else if (page === 'exams') {
@@ -350,8 +356,8 @@ async function renderWorkspace(page = 'overview') {
     } else {
       const [es, rs] = await Promise.all([api('/api/exams'), api('/api/exams/results/mine')]);
       dashCache = { questions: [], exams: es.exams || [], results: rs.results || [] };
-      const nav = navButton('overview', 'My learning', page === 'overview') + navButton('results', 'My results', page === 'results');
-      const content = page === 'results'
+      const nav = navButton('overview', 'My learning', page === 'overview') + navButton('results', 'My results', page === 'results') + navButton('profile', 'Profile management', page === 'profile');
+      const content = page === 'profile' ? profileHtml() : page === 'results'
         ? '<div class="iq-page-head"><div><span class="eyebrow">PERFORMANCE</span><h2>My results</h2><p class="muted">Your submitted assessments and scores.</p></div></div>' + (dashCache.results.length ? dashCache.results.map(resultCardHtml).join('') : '<div class="iq-panel"><p class="muted">No submitted exam results yet.</p></div>')
         : '<div class="iq-page-head"><div><span class="eyebrow">STUDENT PORTAL</span><h2>Available assessments</h2><p class="muted">Open an exam, read the rules, then start. The timer runs on the server.</p></div></div>' + (dashCache.exams.length ? dashCache.exams.map(studentExamCardHtml).join('') : '<div class="iq-panel"><p class="muted">No published assessments are available right now. Check again later.</p></div>');
       root.innerHTML = shell(content, nav, 'STUDENT');
@@ -376,9 +382,12 @@ document.addEventListener('click', async e => {
   const target = e.target instanceof Element ? e.target : null;
   if (!target) return;
   const stop = () => { e.preventDefault(); e.stopPropagation(); };
-
+  if(target.closest('#iqMenuToggle')){stop();const side=$('#iqSidebar');side?.classList.toggle('open');$('#iqMenuToggle')?.setAttribute('aria-expanded',String(side?.classList.contains('open')));$('#iqSidebarScrim')?.classList.toggle('visible',!!side?.classList.contains('open'));return;}
+  if(target.closest('#iqSidebarScrim')){stop();$('#iqSidebar')?.classList.remove('open');$('#iqSidebarScrim')?.classList.remove('visible');$('#iqMenuToggle')?.setAttribute('aria-expanded','false');return;}
+  if(target.closest('#iqAccountToggle')){stop();const menu=$('#iqAccountMenu');menu?.classList.toggle('hidden');$('#iqAccountToggle')?.setAttribute('aria-expanded',String(!menu?.classList.contains('hidden')));return;}
+  if(target.closest('#iqMenuLogout')){stop();if(activeExam&&!confirm('Your exam is still running. Sign out anyway?'))return;logout();return;}
   const nav = target.closest('[data-page]');
-  if (nav) { stop(); await renderWorkspace(nav.dataset.page); return; }
+  if (nav) { stop();$('#iqSidebar')?.classList.remove('open');$('#iqSidebarScrim')?.classList.remove('visible');$('#iqMenuToggle')?.setAttribute('aria-expanded','false');$('#iqAccountMenu')?.classList.add('hidden');await renderWorkspace(nav.dataset.page); return; }
 
   if (target.closest('[data-home]')) { stop(); location.href = '/'; return; }
 
@@ -489,7 +498,9 @@ document.addEventListener('change', e => {
 /* ------------------------------------------------------------------ teacher forms: add / edit question, create exam */
 document.addEventListener('submit', async e => {
   const form = e.target;
-  if (!(form instanceof HTMLFormElement) || (form.id !== 'addQuestionForm' && form.id !== 'createExamForm')) return;
+  if (!(form instanceof HTMLFormElement)) return;
+  if(form.id==='profileForm'){e.preventDefault();const f=new FormData(form),payload={name:String(f.get('name')||'').trim(),mobile:String(f.get('mobile')||'').trim()};if(currentUser?.role==='student'){payload.course=String(f.get('course')||'').trim();payload.branch=String(f.get('branch')||'').trim();}try{const out=await api('/api/auth/me',{method:'PATCH',body:JSON.stringify(payload)});currentUser=out.user;await renderWorkspace('profile');workspaceNotice('Profile updated successfully.');}catch(err){workspaceNotice(err.message,true);}return;}
+  if (form.id !== 'addQuestionForm' && form.id !== 'createExamForm') return;
   e.preventDefault();
   const button = form.querySelector('[type="submit"]');
   try {

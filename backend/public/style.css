@@ -141,3 +141,26 @@ body[data-theme="light"] .iq-share input { background:#f8faff; color:#17243c; }
 .iq-action-notice.error{border-color:#ff647577;background:#ff64751a;color:#ffb8c1}
 body[data-theme="light"] .iq-action-notice{color:#145b4b;background:#e8f7f1;border-color:#a8dfc8}
 body[data-theme="light"] .iq-action-notice.error{color:#8f1d2b;background:#fff0f1;border-color:#e9a4ad}
+
+/* ---- v2: question rules, chips, exam rules, banners, sticky timer ---- */
+.iq-rules{background:color-mix(in srgb,var(--accent) 9%,transparent);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);border-radius:12px;padding:14px 16px;margin:0 0 16px;font-size:12px;line-height:1.6;color:var(--text)}
+.iq-rules ul{margin:8px 0 0;padding-left:18px}.iq-rules li{margin:4px 0;color:var(--muted)}.iq-rules li b{color:var(--text)}
+.iq-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.iq-chips .iq-correct{margin:0}
+.iq-chip{display:inline-block;font-size:10px;letter-spacing:.4px;padding:4px 8px;border-radius:20px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--text);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);text-transform:capitalize}
+.iq-chip.neg{background:#ff647518;border-color:#ff647555;color:#e0566a}
+.iq-banner{border-radius:10px;padding:11px 14px;margin:0 0 14px;font-size:12px;line-height:1.5}
+.iq-banner.warn{background:#ffb34720;border:1px solid #ffb34766;color:#b36b00}
+body[data-theme="dark"] .iq-banner.warn,:root:not([data-theme="light"]) .iq-banner.warn{color:#ffd28a}
+.iq-rule-list{margin:16px 0;padding-left:20px;font-size:13px;line-height:1.7;color:var(--text)}
+.iq-rule-list li{margin:7px 0}.iq-rule-list li.danger{color:#e0566a}
+body[data-theme="dark"] .iq-rule-list li.danger{color:#ff9aa8}
+.iq-inline{display:flex;margin:14px 0 0;padding:8px 0}
+.iq-run-head{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0;margin-top:0;border-bottom:1px solid var(--line)}
+.iq-clock.low{background:#ff647522;border-color:#ff6475;color:#e0566a;animation:iqpulse 1s infinite}
+@keyframes iqpulse{50%{opacity:.55}}
+.iq-status.failed{background:#ff647518;color:#e0566a}
+.iq-status.closed{background:#8891a822;color:var(--muted)}
+.iq-result-final .iq-banner{text-align:left}
+.iq-result-row strong{white-space:nowrap}
+@media(max-width:760px){.iq-run-head{flex-direction:row}}

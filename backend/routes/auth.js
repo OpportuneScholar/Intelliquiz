@@ -2,9 +2,9 @@ const router = require('express').Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { Resend } = require('resend');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
+const { sendMail } = require('../services/mailer');
 
 function token(u) {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -19,8 +19,14 @@ const publicUser = u => ({
   rollNumber: u.rollNumber, course: u.course, branch: u.branch, mobile: u.mobile
 });
 const validEmail = email => typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const digest = value => crypto.createHash('sha256').update(value).digest('hex');
+const otpDigest = (email, otp) => crypto.createHash('sha256').update(email.toLowerCase() + ':' + otp).digest('hex');
 
+const RESET_OTP_TTL_MS = 10 * 60 * 1000;
+const RESET_RESEND_COOLDOWN_MS = 60 * 1000;
+const RESET_MAX_ATTEMPTS = 5;
+const minPasswordFor = role => (role === 'teacher' ? 10 : 8);
+
+// ---------- Student registration (no OTP) ----------
 router.post('/register', async (req, res, next) => {
   try {
     const { name, email, password, rollNumber, course, branch, mobile } = req.body || {};
@@ -39,6 +45,7 @@ router.post('/register', async (req, res, next) => {
   }
 });
 
+// ---------- Login (students and teachers: email + password only, no OTP) ----------
 router.post('/login', async (req, res, next) => {
   try {
     const { email, password, role } = req.body || {};
@@ -50,64 +57,80 @@ router.post('/login', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Always return the same message so account existence cannot be discovered.
+// ---------- Forgot password: step 1 — email a 6-digit OTP ----------
+// The response is always the same for unknown emails, so account existence cannot be discovered.
 router.post('/forgot-password', async (req, res, next) => {
   try {
     const email = validEmail(req.body?.email) ? req.body.email.toLowerCase().trim() : '';
-    const genericMessage = 'If an account exists for that email, a password reset link will be sent shortly.';
     if (!email) return res.status(400).json({ message: 'Enter a valid email address.' });
-    const user = await User.findOne({ email, isActive: true }).select('+passwordResetTokenHash +passwordResetExpiresAt');
+    const genericMessage = 'If an account exists for that email, a 6-digit OTP has been sent. It expires in 10 minutes.';
+    const user = await User.findOne({ email, isActive: true }).select('+passwordResetSentAt');
     if (!user) return res.status(202).json({ message: genericMessage });
-    if (!process.env.RESEND_API_KEY) return res.status(503).json({ message: 'Password reset email is not configured. Please contact the site administrator.' });
+    if (user.passwordResetSentAt && Date.now() - user.passwordResetSentAt.getTime() < RESET_RESEND_COOLDOWN_MS) {
+      return res.status(202).json({ message: genericMessage }); // resend cooldown, silently
+    }
 
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    user.passwordResetTokenHash = digest(rawToken);
-    user.passwordResetExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    user.passwordResetOtpHash = otpDigest(email, otp);
+    user.passwordResetExpiresAt = new Date(Date.now() + RESET_OTP_TTL_MS);
+    user.passwordResetAttempts = 0;
+    user.passwordResetSentAt = new Date();
     await user.save();
 
-    const baseUrl = (process.env.PUBLIC_URL || req.get('origin') || process.env.CLIENT_ORIGIN || '').split(',')[0].trim().replace(/\/$/, '');
-    if (!baseUrl) {
-      user.passwordResetTokenHash = undefined;
+    try {
+      await sendMail({
+        to: email,
+        subject: 'Your IntelliQuiz password reset code',
+        text: 'Your IntelliQuiz password reset code is ' + otp + '. It expires in 10 minutes. If you did not request this, ignore this email.',
+        html: '<h2>Reset your IntelliQuiz password</h2><p>Your one-time code:</p><p style="font-size:32px;font-weight:bold;letter-spacing:8px">' + otp + '</p><p>It expires in 10 minutes. Never share this code with anyone.</p><p>If you did not request this, ignore this email.</p>'
+      });
+    } catch (mailError) {
+      user.passwordResetOtpHash = undefined;
       user.passwordResetExpiresAt = undefined;
+      user.passwordResetSentAt = undefined;
       await user.save();
-      return res.status(503).json({ message: 'Set CLIENT_ORIGIN to the public IntelliQuiz URL to enable password reset links.' });
-    }
-    const resetUrl = baseUrl + '/?resetToken=' + encodeURIComponent(rawToken) + '&email=' + encodeURIComponent(email);
-    const { error } = await new Resend(process.env.RESEND_API_KEY).emails.send({
-      from: process.env.MAIL_FROM || 'IntelliQuiz <onboarding@resend.dev>',
-      to: [email],
-      subject: 'Reset your IntelliQuiz password',
-      text: 'Use this link to reset your IntelliQuiz password within 15 minutes: ' + resetUrl + '\nIf you did not request this, ignore this email.',
-      html: '<h2>Reset your IntelliQuiz password</h2><p>This link expires in 15 minutes.</p><p><a href="' + resetUrl + '">Reset password</a></p><p>If you did not request this, ignore this email.</p>'
-    });
-    if (error) {
-      user.passwordResetTokenHash = undefined;
-      user.passwordResetExpiresAt = undefined;
-      await user.save();
-      console.error('Password reset email failed:', error.message);
-      return res.status(502).json({ message: 'Could not send reset email. Check Resend sender/domain settings.' });
+      return next(mailError);
     }
     res.status(202).json({ message: genericMessage });
   } catch (e) { next(e); }
 });
 
+// ---------- Forgot password: step 2 — verify the OTP and set a new password ----------
 router.post('/reset-password', async (req, res, next) => {
   try {
-    const { email, token: rawToken, password } = req.body || {};
-    if (!validEmail(email) || typeof rawToken !== 'string' || rawToken.length < 32 || typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ message: 'Provide a valid reset link and a password of at least 8 characters.' });
+    const email = validEmail(req.body?.email) ? req.body.email.toLowerCase().trim() : '';
+    const otp = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
+    const password = req.body?.password;
+    if (!email || !/^\d{6}$/.test(otp) || typeof password !== 'string') {
+      return res.status(400).json({ message: 'Enter your email, the 6-digit OTP and a new password.' });
     }
-    const user = await User.findOne({ email: email.toLowerCase().trim(), isActive: true })
-      .select('+passwordResetTokenHash +passwordResetExpiresAt');
-    if (!user || !user.passwordResetTokenHash || !user.passwordResetExpiresAt ||
-        user.passwordResetExpiresAt <= new Date() ||
-        !crypto.timingSafeEqual(Buffer.from(digest(rawToken), 'hex'), Buffer.from(user.passwordResetTokenHash, 'hex'))) {
-      return res.status(400).json({ message: 'This reset link is invalid or expired. Request a new one.' });
+    const invalid = { message: 'This OTP is invalid or has expired. Request a new one.' };
+    const user = await User.findOne({ email, isActive: true })
+      .select('+passwordResetOtpHash +passwordResetExpiresAt +passwordResetAttempts');
+    if (!user || !user.passwordResetOtpHash || !user.passwordResetExpiresAt || user.passwordResetExpiresAt <= new Date()) {
+      return res.status(400).json(invalid);
+    }
+    if (password.length < minPasswordFor(user.role)) {
+      return res.status(400).json({ message: 'Password must be at least ' + minPasswordFor(user.role) + ' characters.' });
+    }
+    if ((user.passwordResetAttempts || 0) >= RESET_MAX_ATTEMPTS) {
+      user.passwordResetOtpHash = undefined; user.passwordResetExpiresAt = undefined; user.passwordResetAttempts = 0;
+      await user.save();
+      return res.status(400).json({ message: 'Too many wrong attempts. Request a new OTP.' });
+    }
+    const expected = Buffer.from(user.passwordResetOtpHash, 'hex');
+    const actual = Buffer.from(otpDigest(email, otp), 'hex');
+    if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
+      user.passwordResetAttempts = (user.passwordResetAttempts || 0) + 1;
+      await user.save();
+      return res.status(400).json({ message: 'Incorrect OTP. ' + Math.max(0, RESET_MAX_ATTEMPTS - user.passwordResetAttempts) + ' attempt(s) left.' });
     }
     user.passwordHash = await bcrypt.hash(password, 12);
-    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
-    user.passwordResetTokenHash = undefined;
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1; // signs out every old session
+    user.passwordResetOtpHash = undefined;
     user.passwordResetExpiresAt = undefined;
+    user.passwordResetAttempts = 0;
+    user.passwordResetSentAt = undefined;
     await user.save();
     res.json({ message: 'Password updated successfully. You can now sign in.' });
   } catch (e) { next(e); }

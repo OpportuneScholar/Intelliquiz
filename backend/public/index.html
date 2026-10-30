@@ -3,64 +3,32 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#10152b"><title>IntelliQuiz — Assessment Portal</title>
-<link rel="icon" href="logo.svg?v=20261030f" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20261030m">
+<link rel="icon" href="/logo.svg?v=20261031a" type="image/svg+xml"><link rel="stylesheet" href="/style.css?v=20261031a">
 </head>
 <body>
-<div id="pageLoader" class="page-loader" role="status" aria-label="Loading IntelliQuiz"><div class="loader-mark"><img src="logo.svg?v=20261030f" alt=""><span></span></div><p>Preparing your learning space</p><div class="loader-track"><i></i></div></div>
-<header class="topbar"><a class="brand" href="/"><img src="logo.svg?v=20261030f" alt="IntelliQuiz logo"><span><b>IntelliQuiz</b><small>ASSESSMENT PORTAL</small></span></a><div class="header-actions"><span class="status"><i></i> Learning made smarter</span><button type="button" id="themeToggle" class="theme-toggle" aria-label="Switch color theme">☀ Light mode</button></div></header>
+<div id="pageLoader" class="page-loader" role="status" aria-label="Loading IntelliQuiz"><div class="loader-mark"><img src="/logo.svg?v=20261031a" alt=""><span></span></div><p>Preparing your learning space</p><div class="loader-track"><i></i></div></div>
+<header class="topbar"><a class="brand" href="/"><img src="/logo.svg?v=20261031a" alt="IntelliQuiz logo"><span><b>IntelliQuiz</b><small>ASSESSMENT PORTAL</small></span></a><div class="header-actions"><span class="status"><i></i> Learning made smarter</span><button type="button" id="themeToggle" class="theme-toggle" aria-label="Switch color theme">☀ Light mode</button></div></header>
 <main>
 <section id="auth" class="auth-layout">
 <div class="hero"><span class="eyebrow">SMART LEARNING PLATFORM</span><h1>Every question is a step toward <em>progress.</em></h1><p>Create assessments, practise with confidence, and understand performance with one simple portal.</p><div class="feature-list"><div><span>01</span><p><b>Structured assessments</b><small>Organised quizzes and exams</small></p></div><div><span>02</span><p><b>Clear progress</b><small>Results that help you improve</small></p></div><div><span>03</span><p><b>One secure portal</b><small>Separate access for students and teachers</small></p></div></div><div class="hero-foot">FOCUSED LEARNING. MEANINGFUL RESULTS.</div></div>
 <div class="auth-card"><div class="tabs"><button class="tab active" data-view="login">Sign in</button><button class="tab" data-view="register">Student registration</button><button class="tab" data-view="teacher">Teacher signup</button></div>
 <form id="loginForm"><span class="eyebrow">WELCOME BACK</span><h2>Sign in to IntelliQuiz</h2><p class="muted">Use your registered account to continue.</p><label>Account type<select name="role"><option value="student">Student</option><option value="teacher">Teacher</option></select></label><label>Email address<input name="email" type="email" placeholder="you@example.com" required autocomplete="email"></label><label>Password<input name="password" type="password" placeholder="Enter your password" required autocomplete="current-password"></label><button class="forgot-link" type="button" id="forgotLink">Forgot password?</button><button class="primary" type="submit">Sign in <span>→</span></button></form>
 <form id="registerForm" class="hidden"><span class="eyebrow">GET STARTED</span><h2>Create student account</h2><p class="muted">Fill in your academic details to register.</p><div class="two"><label>Full name<input name="name" required></label><label>Roll number<input name="rollNumber" required></label></div><label>Email address<input name="email" type="email" required></label><div class="two"><label>Course<input name="course" placeholder="B.Tech" required></label><label>Branch<input name="branch" placeholder="CSE" required></label></div><div class="two"><label>Mobile number<input name="mobile" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required></label><label>Password<input name="password" type="password" minlength="8" required></label></div><button class="primary" type="submit">Create account <span>→</span></button></form>
-<form id="forgotForm" class="hidden"><span class="eyebrow">ACCOUNT RECOVERY</span><h2>Reset your password</h2><p class="muted">Enter your registered email. If an account exists, we’ll send a secure reset link.</p><label>Email address<input name="email" type="email" required autocomplete="email"></label><button class="primary" type="submit">Send reset link <span>→</span></button><button class="forgot-link" type="button" id="backToLogin">Back to sign in</button></form>
-<form id="resetForm" class="hidden"><span class="eyebrow">SECURE YOUR ACCOUNT</span><h2>Choose a new password</h2><p class="muted">Use at least 8 characters. Reset links expire after 15 minutes.</p><label>New password<input name="password" type="password" minlength="8" required autocomplete="new-password"></label><label>Confirm new password<input name="confirmPassword" type="password" minlength="8" required autocomplete="new-password"></label><button class="primary" type="submit">Update password <span>→</span></button></form>
+<form id="forgotForm" class="hidden"><span class="eyebrow">ACCOUNT RECOVERY</span><h2>Reset your password</h2><p class="muted">Enter your registered email. We will send a 6-digit OTP to it.</p><label>Email address<input name="email" type="email" required autocomplete="email"></label><button class="primary" type="submit">Send OTP <span>→</span></button><button class="forgot-link" type="button" id="backToLogin">Back to sign in</button></form>
+<form id="resetForm" class="hidden"><span class="eyebrow">VERIFY &amp; RESET</span><h2>Enter OTP and new password</h2><p class="muted" id="resetHint">Enter the 6-digit OTP sent to your email. It expires in 10 minutes.</p><label>6-digit OTP<input name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" required autocomplete="one-time-code"></label><label>New password<input name="password" type="password" minlength="8" required autocomplete="new-password"></label><label>Confirm new password<input name="confirmPassword" type="password" minlength="8" required autocomplete="new-password"></label><button class="primary" type="submit">Update password <span>→</span></button><button class="forgot-link" type="button" id="resendOtp">Resend OTP</button><button class="forgot-link" type="button" id="resetBack">Back to sign in</button></form>
 <form id="teacherForm" class="hidden"><span class="eyebrow">TEACHER ACCESS</span><h2>Teacher registration</h2><p class="muted">Verify your email to create a teacher account.</p><div id="teacherStepOne"><label>Full name<input name="name" required></label><label>Work email<input name="email" type="email" required></label><label>Password<input name="password" type="password" minlength="10" required></label><button class="primary" type="button" id="requestOtp">Send verification code <span>→</span></button></div><div id="teacherStepTwo" class="hidden"><label>Email verification code<input id="otp" inputmode="numeric" maxlength="6" placeholder="6-digit code" required></label><button class="primary" type="button" id="verifyOtp">Verify and register <span>→</span></button></div></form>
 <div id="message" class="message hidden" role="status"></div><p class="fine-print">Your information is used to manage your IntelliQuiz account.</p></div></section>
 <section id="dashboard" class="dashboard hidden"><div class="dash-head"><div><span class="eyebrow">YOUR WORKSPACE</span><h1 id="welcome">Welcome</h1><p class="muted" id="roleText"></p></div><button id="logout" class="secondary">Sign out</button></div><div id="dashboardContent"></div></section>
-</main><footer><span>© <span id="year"></span> IntelliQuiz</span><span>Learn • Assess • Improve</span></footer><script src="config.js?v=20261030f"></script><script src="app.js?v=20261030m" defer></script><script>window.addEventListener("load",function(){var loader=document.getElementById("pageLoader");if(loader){loader.classList.add("page-loader-hidden");setTimeout(function(){loader.remove()},500)}});setTimeout(function(){var loader=document.getElementById("pageLoader");if(loader){loader.classList.add("page-loader-hidden");setTimeout(function(){loader.remove()},500)}},7000);</script>
+</main><footer><span>© <span id="year"></span> IntelliQuiz</span><span>Learn • Assess • Improve</span></footer><script src="/config.js?v=20261031a"></script><script src="/app.js?v=20261031a" defer></script><script>window.addEventListener("load",function(){var loader=document.getElementById("pageLoader");if(loader){loader.classList.add("page-loader-hidden");setTimeout(function(){loader.remove()},500)}});setTimeout(function(){var loader=document.getElementById("pageLoader");if(loader){loader.classList.add("page-loader-hidden");setTimeout(function(){loader.remove()},500)}},7000);</script>
 
 <script>
 (function(){
-  /* Prevent credentials ever being submitted in the URL by native form navigation. */
+  /* Never leave credentials in the URL if a form is ever submitted natively. */
   var params=new URLSearchParams(location.search);
   if(params.has("password")||params.has("email")){
     var safeRole=params.get("role");
     history.replaceState({},document.title,location.pathname+(safeRole?"?role="+encodeURIComponent(safeRole):""));
   }
-  document.addEventListener("submit",function(event){
-    var form=event.target;
-    if(!form||form.id!=="loginForm")return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    var button=form.querySelector('[type="submit"]');
-    var message=document.getElementById("message");
-    var original=button?button.innerHTML:"";
-    if(button){button.disabled=true;button.textContent="Signing in…";}
-    if(message){message.className="message hidden";message.textContent="";}
-    var data=new FormData(form);
-    fetch("/api/auth/login",{
-      method:"POST",
-      credentials:"same-origin",
-      headers:{"Content-Type":"application/json","Accept":"application/json"},
-      body:JSON.stringify({
-        email:String(data.get("email")||"").trim(),
-        password:String(data.get("password")||""),
-        role:String(data.get("role")||"")
-      })
-    }).then(async function(response){
-      var result=await response.json().catch(function(){return {};});
-      if(!response.ok)throw new Error(result.message||"Sign in failed. Check account type, email and password.");
-      if(!result.token||!result.user)throw new Error("Server returned an incomplete sign-in response.");
-      localStorage.setItem("iq_token",result.token);
-      history.replaceState({},document.title,location.pathname);
-      if(typeof window.showDashboard==="function"){window.showDashboard(result);}else{throw new Error("Login succeeded, but the dashboard script did not initialize. Refresh the page and try again.");}
-    }).catch(function(error){
-      if(message){message.textContent=error.message||"Unable to sign in. Please try again.";message.className="message error";message.setAttribute("role","alert");}
-      if(button){button.disabled=false;button.innerHTML=original;}
-    });
-  },true);
 })();
 </script>
 </body></html>

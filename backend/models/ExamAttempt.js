@@ -5,6 +5,8 @@ const schema = new mongoose.Schema({
   attemptNumber: { type: Number, required: true, min: 1 },
   status: { type: String, enum: ['in_progress', 'submitted', 'expired'], default: 'in_progress', index: true },
   answers: { type: mongoose.Schema.Types.Mixed, default: {} },
+  // Stable per-attempt order: a student's sequence stays unchanged on refresh/resume.
+  questionOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
   startedAt: { type: Date, required: true, default: Date.now },
   expiresAt: { type: Date, required: true },
   submittedAt: { type: Date, default: null }

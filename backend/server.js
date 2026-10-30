@@ -33,10 +33,12 @@ app.use(helmet({
 const configuredOrigins = (process.env.CLIENT_ORIGIN || '').split(',').map(v => v.trim()).filter(Boolean);
 app.use(cors((req, callback) => {
   const requestOrigin = req.header('Origin');
-  const sameOrigin = requestOrigin === `${req.protocol}://${req.get('host')}`;
+  const forwardedProto = (req.get('x-forwarded-proto') || req.protocol).split(',')[0].trim();
+  const sameOrigin = requestOrigin === `${forwardedProto}://${req.get('host')}`;
   const allowed = !requestOrigin || !configuredOrigins.length || configuredOrigins.includes(requestOrigin) || sameOrigin;
   callback(null, { origin: allowed, credentials: true });
 }));
+app.use((req, res, next) => { if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store'); next(); });
 app.use(express.json({ limit: '100kb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/api/auth', rateLimit({ windowMs: 900000, limit: 60, standardHeaders: 'draft-7', legacyHeaders: false }), authRoutes);

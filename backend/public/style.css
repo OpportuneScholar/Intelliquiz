@@ -118,3 +118,20 @@ body[data-theme="light"] .iq-check,
 body[data-theme="light"] .iq-answer { color:#26364f; }
 body[data-theme="light"] .iq-question { border-color:#e2e8f0; }
 body[data-theme="light"] .iq-share input { background:#f8faff; color:#17243c; }
+
+
+/* Polished question and assessment controls */
+.iq-actions { align-items:center; }
+.iq-actions button { min-height:40px; }
+.iq-danger { font:600 12px 'DM Sans'; }
+.iq-form .primary { min-height:44px; }
+.iq-select-questions .iq-check { border-bottom:1px solid var(--line); }
+.iq-select-questions .iq-check:last-child { border-bottom:0; }
+.iq-exam-card [data-export-results] { border-style:dashed; }
+@media(max-width:600px) {
+  .iq-actions { gap:8px; }
+  .iq-actions button { flex:1 1 auto; }
+  .iq-question .iq-actions { width:100%; }
+  .iq-question .iq-actions button { flex:1; }
+  .iq-share input { width:100%; }
+}

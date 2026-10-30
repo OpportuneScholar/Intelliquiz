@@ -338,6 +338,7 @@ async function renderWorkspace(page = 'overview') {
       } else if (page === 'questions') {
         content = '<div class="iq-page-head"><div><span class="eyebrow">QUESTION LIBRARY</span><h2>Question bank</h2><p class="muted">Questions you create are private to your teacher account.</p></div></div>' +
           '<div class="iq-panel"><h3 id="questionFormTitle">Add a question</h3>' + QUESTION_RULES_HTML + questionFormHtml() + '</div>' +
+          '<div class="iq-panel iq-import-panel"><h3>Import questions in bulk</h3><p class="iq-muted">Upload PDF, DOCX, TXT, CSV or JSON. Review the extracted questions before saving. Text-based PDFs are supported; scanned PDFs need OCR.</p><label>Choose file<input id="questionImportFile" type="file" accept=".pdf,.docx,.txt,.csv,.json"></label><div class="iq-actions"><button type="button" class="secondary" id="previewQuestionImport">Analyse file &amp; preview</button></div><div id="questionImportStatus" class="iq-muted" aria-live="polite"></div><div id="questionImportPreview"></div></div>' +
           '<div class="iq-panel"><h3>Your questions (' + dashCache.questions.length + ')</h3>' + (dashCache.questions.length ? dashCache.questions.map(questionCardHtml).join('') : '<p class="muted">No questions yet. Add your first question above.</p>') + '</div>';
       } else if (page === 'create-exam') {
         content = createExamHtml();
@@ -532,6 +533,14 @@ document.addEventListener('submit', async e => {
     });
   } catch (err) { workspaceNotice(err.message || 'The action could not be completed.', true); }
 });
+
+
+let questionImportPreview=[];
+$('#previewQuestionImport')?.addEventListener('click',async()=>{const file=$('#questionImportFile')?.files?.[0],status=$('#questionImportStatus'),preview=$('#questionImportPreview');if(!file){status.textContent='Choose a supported file first.';return;}if(file.size>10*1024*1024){status.textContent='Maximum file size is 10 MB.';return;}status.textContent='Extracting and validating questions…';preview.innerHTML='';questionImportPreview=[];
+try{const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);const result=await api('/api/questions/import/preview',{method:'POST',body:JSON.stringify({fileName:file.name,fileBase64:btoa(binary)})});questionImportPreview=result.questions||[];status.textContent='Detected '+result.detectedCount+' question(s); '+result.importableCount+' valid and ready. Format: '+result.format+'.';
+preview.innerHTML=(result.errors?.length?'<div class="iq-banner warn">'+result.errors.map(x=>esc(x.message)).join('<br>')+'</div>':'')+(questionImportPreview.length?'<p class="iq-muted">Review before importing:</p>'+questionImportPreview.map((q,i)=>'<article class="iq-question"><div><b>'+(i+1)+'. '+esc(q.text)+'</b><div class="iq-muted">'+q.options.map((o,j)=>String.fromCharCode(65+j)+'. '+esc(o)).join(' · ')+'</div><div class="iq-chips"><span class="iq-chip">Answer '+q.correctOption+'</span><span class="iq-chip">'+esc(q.difficulty)+'</span><span class="iq-chip">'+fmtNum(q.marks)+' marks</span></div></div></article>').join('')+'<div class="iq-actions"><button type="button" class="primary" id="confirmQuestionImport">Import '+questionImportPreview.length+' question(s)</button></div>':'<p class="iq-muted">No valid MCQs found. Ensure each question has four options and an answer key.</p>');
+}catch(err){status.textContent=err.message||'Could not analyse file.';}});
+document.addEventListener('click',async e=>{if(!(e.target instanceof Element)||!e.target.closest('#confirmQuestionImport'))return;const btn=e.target.closest('#confirmQuestionImport');try{await withBusy(btn,'Importing…',async()=>{const result=await api('/api/questions/import',{method:'POST',body:JSON.stringify({questions:questionImportPreview})});questionImportPreview=[];await renderWorkspace('questions');workspaceNotice(result.message);});}catch(err){workspaceNotice(err.message,true);}});
 
 /* ------------------------------------------------------------------ student: exam page (rules -> exam -> result) */
 const examNotice = (title, text, withHome = true) =>

@@ -164,3 +164,5 @@ body[data-theme="dark"] .iq-rule-list li.danger{color:#ff9aa8}
 .iq-result-final .iq-banner{text-align:left}
 .iq-result-row strong{white-space:nowrap}
 @media(max-width:760px){.iq-run-head{flex-direction:row}}
+
+.iq-import-panel{border-style:dashed}.iq-import-panel input[type=file]{display:block;width:100%;margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text)}.iq-import-panel .iq-question{display:block}.iq-import-panel .iq-banner{max-height:220px;overflow:auto}

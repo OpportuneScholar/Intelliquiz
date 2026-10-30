@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "check": "node --check server.js && node --check routes/auth.js && node --check routes/teacherRegistration.js && node --check routes/questions.js && node --check routes/exams.js && node --check middleware/auth.js && node --check models/User.js && node --check models/Question.js && node --check models/TeacherOtp.js && node --check models/Exam.js && node --check models/Submission.js && node --check public/app.js"
+    "check": "node --check server.js && node --check routes/auth.js && node --check routes/teacherRegistration.js && node --check routes/questions.js && node --check routes/exams.js && node --check middleware/auth.js && node --check models/User.js && node --check models/Question.js && node --check models/TeacherOtp.js && node --check models/Exam.js && node --check models/Submission.js && node --check models/ExamAttempt.js && node --check public/app.js"
   },
   "engines": {
     "node": ">=20"

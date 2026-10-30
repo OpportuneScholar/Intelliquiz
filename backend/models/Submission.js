@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const schema = new mongoose.Schema({
   exam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true, index: true },
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-  attempt: { type: mongoose.Schema.Types.ObjectId, ref: 'ExamAttempt', required: true, unique: true },
+  attempt: { type: mongoose.Schema.Types.ObjectId, ref: 'ExamAttempt', required: true, index: { unique: true, sparse: true } },
   answers: { type: mongoose.Schema.Types.Mixed, default: {} },
   score: { type: Number, required: true, min: 0 },
   totalQuestions: { type: Number, required: true, min: 0 },

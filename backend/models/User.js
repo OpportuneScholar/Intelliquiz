@@ -9,6 +9,7 @@ const schema=new mongoose.Schema({
   branch:{type:String,trim:true,default:''},
   mobile:{type:String,trim:true,default:''},
   isActive:{type:Boolean,default:true},
+  tokenVersion:{type:Number,default:0},
   passwordResetTokenHash:{type:String,default:undefined,select:false},
   passwordResetExpiresAt:{type:Date,default:undefined,select:false}
 },{timestamps:true,versionKey:false});

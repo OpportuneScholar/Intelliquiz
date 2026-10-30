@@ -11,4 +11,5 @@ const schema = new mongoose.Schema({
 }, { timestamps: true, versionKey: false });
 schema.index({ exam: 1, student: 1, attemptNumber: 1 }, { unique: true });
 schema.index({ exam: 1, student: 1, status: 1 });
+schema.index({ exam: 1, student: 1 }, { unique: true, partialFilterExpression: { status: 'in_progress' } });
 module.exports = mongoose.models.ExamAttempt || mongoose.model('ExamAttempt', schema);

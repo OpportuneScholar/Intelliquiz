@@ -10,7 +10,7 @@ function token(u) {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
     throw Object.assign(new Error('JWT_SECRET must contain at least 32 characters.'), { status: 500 });
   }
-  return jwt.sign({ sub: String(u._id), role: u.role }, process.env.JWT_SECRET, {
+  return jwt.sign({ sub: String(u._id), role: u.role, ver: Number(u.tokenVersion || 0) }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '8h', issuer: 'intelliquiz'
   });
 }
@@ -107,6 +107,7 @@ router.post('/reset-password', async (req, res, next) => {
       return res.status(400).json({ message: 'This reset link is invalid or expired. Request a new one.' });
     }
     user.passwordHash = await bcrypt.hash(password, 12);
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     user.passwordResetTokenHash = undefined;
     user.passwordResetExpiresAt = undefined;
     await user.save();

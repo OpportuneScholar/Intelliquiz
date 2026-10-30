@@ -17,14 +17,34 @@ const { requireAuth, requireRole } = require('./middleware/auth');
 const app = express();
 const publicDir = path.join(__dirname, 'public');
 app.disable('x-powered-by');
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(',').map(v => v.trim()) : true, credentials: true }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"], baseUri: ["'self'"], objectSrc: ["'none'"],
+      frameAncestors: ["'none'"], formAction: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:"], connectSrc: ["'self'"]
+    }
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}));
+const configuredOrigins = (process.env.CLIENT_ORIGIN || '').split(',').map(v => v.trim()).filter(Boolean);
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (!configuredOrigins.length || configuredOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origin not allowed by CORS.'));
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '100kb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/api/auth', rateLimit({ windowMs: 900000, limit: 60, standardHeaders: 'draft-7', legacyHeaders: false }), authRoutes);
 app.use('/api/teacher-registration', rateLimit({ windowMs: 900000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false }), teacherRegistrationRoutes);
-app.use('/api/questions', questionRoutes);
-app.use('/api/exams', examRoutes);
+app.use('/api/questions', rateLimit({ windowMs: 900000, limit: 120, standardHeaders: 'draft-7', legacyHeaders: false }), questionRoutes);
+app.use('/api/exams', rateLimit({ windowMs: 900000, limit: 300, standardHeaders: 'draft-7', legacyHeaders: false }), examRoutes);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'IntelliQuiz API', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' }));
 app.get('/api/dashboard/summary', requireAuth, requireRole('teacher'), async (req, res, next) => {
   try {

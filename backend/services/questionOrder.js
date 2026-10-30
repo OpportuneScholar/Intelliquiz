@@ -4,7 +4,7 @@
 // Fisher-Yates is unbiased when Math.random() is uniform.
 function createQuestionOrder(questionIds, random = Math.random) {
   const ids = questionIds.map(id => String(id));
-  for ( (let i = ids.length - 1; i > 0; i--) {
+  for (let i = ids.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
     [ids[i], ids[j]] = [ids[j], ids[i]];
   }

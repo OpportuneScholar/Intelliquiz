@@ -19,5 +19,48 @@
 <form id="teacherForm" class="hidden"><span class="eyebrow">TEACHER ACCESS</span><h2>Teacher registration</h2><p class="muted">Verify your email to create a teacher account.</p><div id="teacherStepOne"><label>Full name<input name="name" required></label><label>Work email<input name="email" type="email" required></label><label>Password<input name="password" type="password" minlength="10" required></label><button class="primary" type="button" id="requestOtp">Send verification code <span>→</span></button></div><div id="teacherStepTwo" class="hidden"><label>Email verification code<input id="otp" inputmode="numeric" maxlength="6" placeholder="6-digit code" required></label><button class="primary" type="button" id="verifyOtp">Verify and register <span>→</span></button></div></form>
 <div id="message" class="message hidden" role="status"></div><p class="fine-print">Your information is used to manage your IntelliQuiz account.</p></div></section>
 <section id="dashboard" class="dashboard hidden"><div class="dash-head"><div><span class="eyebrow">YOUR WORKSPACE</span><h1 id="welcome">Welcome</h1><p class="muted" id="roleText"></p></div><button id="logout" class="secondary">Sign out</button></div><div id="dashboardContent"></div></section>
-</main><footer><span>© <span id="year"></span> IntelliQuiz</span><span>Learn • Assess • Improve</span></footer><script src="config.js?v=20261030f"></script><script src="app.js?v=20261030f" defer></script><script>window.addEventListener("load",function(){var loader=document.getElementById("pageLoader");if(loader){loader.classList.add("page-loader-hidden");setTimeout(function(){loader.remove()},500)}});setTimeout(function(){var loader=document.getElementById("pageLoader");if(loader){loader.classList.add("page-loader-hidden");setTimeout(function(){loader.remove()},500)}},7000);</script>
+</main><footer><span>© <span id="year"></span> IntelliQuiz</span><span>Learn • Assess • Improve</span></footer><script src="config.js?v=20261030f"></script><script src="app.js?v=20261030g" defer></script><script>window.addEventListener("load",function(){var loader=document.getElementById("pageLoader");if(loader){loader.classList.add("page-loader-hidden");setTimeout(function(){loader.remove()},500)}});setTimeout(function(){var loader=document.getElementById("pageLoader");if(loader){loader.classList.add("page-loader-hidden");setTimeout(function(){loader.remove()},500)}},7000);</script>
+
+<script>
+(function(){
+  /* Prevent credentials ever being submitted in the URL by native form navigation. */
+  var params=new URLSearchParams(location.search);
+  if(params.has("password")||params.has("email")){
+    var safeRole=params.get("role");
+    history.replaceState({},document.title,location.pathname+(safeRole?"?role="+encodeURIComponent(safeRole):""));
+  }
+  document.addEventListener("submit",function(event){
+    var form=event.target;
+    if(!form||form.id!=="loginForm")return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    var button=form.querySelector('[type="submit"]');
+    var message=document.getElementById("message");
+    var original=button?button.innerHTML:"";
+    if(button){button.disabled=true;button.textContent="Signing in…";}
+    if(message){message.className="message hidden";message.textContent="";}
+    var data=new FormData(form);
+    fetch("/api/auth/login",{
+      method:"POST",
+      credentials:"same-origin",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify({
+        email:String(data.get("email")||"").trim(),
+        password:String(data.get("password")||""),
+        role:String(data.get("role")||"")
+      })
+    }).then(async function(response){
+      var result=await response.json().catch(function(){return {};});
+      if(!response.ok)throw new Error(result.message||"Sign in failed. Check account type, email and password.");
+      if(!result.token||!result.user)throw new Error("Server returned an incomplete sign-in response.");
+      localStorage.setItem("iq_token",result.token);
+      history.replaceState({},document.title,location.pathname);
+      location.reload();
+    }).catch(function(error){
+      if(message){message.textContent=error.message||"Unable to sign in. Please try again.";message.className="message error";message.setAttribute("role","alert");}
+      if(button){button.disabled=false;button.innerHTML=original;}
+    });
+  },true);
+})();
+</script>
 </body></html>

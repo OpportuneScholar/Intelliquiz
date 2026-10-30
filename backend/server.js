@@ -17,6 +17,8 @@ const { requireAuth, requireRole } = require('./middleware/auth');
 const app = express();
 const publicDir = path.join(__dirname, 'public');
 app.disable('x-powered-by');
+// Trust the single reverse proxy in front of the Voroa service.
+app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {

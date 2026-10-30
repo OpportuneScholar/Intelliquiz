@@ -1,6 +1,40 @@
-const router=require('express').Router();const Question=require('../models/Question');const {requireAuth,requireRole}=require('../middleware/auth');router.use(requireAuth);
-router.get('/',async(req,res,next)=>{try{const rows=await Question.find({isActive:true}).sort({createdAt:-1}).lean();res.json({questions:rows.map(q=>({id:String(q._id),text:q.text,options:q.options,...(req.user.role==='teacher'?{correctOption:q.correctOption}:{}),createdAt:q.createdAt}))});}catch(e){next(e);}});
-router.post('/',requireRole('teacher'),async(req,res,next)=>{try{const {text,options,correctOption}=req.body||{};if(typeof text!=='string'||!text.trim()||!Array.isArray(options)||options.length!==4||options.some(o=>typeof o!=='string'||!o.trim())||!['A','B','C','D'].includes(correctOption))return res.status(400).json({message:'Provide a question, four non-empty options and a valid correct answer.'});const q=await Question.create({text:text.trim(),options,correctOption,createdBy:req.user._id});res.status(201).json({question:{id:String(q._id),text:q.text,options:q.options,correctOption:q.correctOption,createdAt:q.createdAt}});}catch(e){next(e);}});
-router.patch('/:id',requireRole('teacher'),async(req,res,next)=>{try{const update={};const {text,options,correctOption}=req.body||{};if(text!==undefined){if(typeof text!=='string'||!text.trim())return res.status(400).json({message:'Question text is required.'});update.text=text.trim();}if(options!==undefined){if(!Array.isArray(options)||options.length!==4||options.some(o=>typeof o!=='string'||!o.trim()))return res.status(400).json({message:'Exactly four non-empty options are required.'});update.options=options;}if(correctOption!==undefined){if(!['A','B','C','D'].includes(correctOption))return res.status(400).json({message:'Invalid correct answer.'});update.correctOption=correctOption;}const q=await Question.findOneAndUpdate({_id:req.params.id,isActive:true,createdBy:req.user._id},update,{new:true,runValidators:true});if(!q)return res.status(404).json({message:'Question not found.'});res.json({question:{id:String(q._id),text:q.text,options:q.options,correctOption:q.correctOption}});}catch(e){next(e);}});
-router.delete('/:id',requireRole('teacher'),async(req,res,next)=>{try{const q=await Question.findOneAndUpdate({_id:req.params.id,createdBy:req.user._id,isActive:true},{isActive:false});if(!q)return res.status(404).json({message:'Question not found.'});res.json({message:'Question removed.'});}catch(e){next(e);}});
-module.exports=router;
+const router = require('express').Router();
+const Question = require('../models/Question');
+const { requireAuth, requireRole } = require('../middleware/auth');
+router.use(requireAuth);
+
+router.get('/', requireRole('teacher'), async (req, res, next) => {
+  try {
+    const rows = await Question.find({ isActive: true, createdBy: req.user._id }).sort({ createdAt: -1 }).lean();
+    res.json({ questions: rows.map(q => ({ id: String(q._id), text: q.text, options: q.options, correctOption: q.correctOption, createdAt: q.createdAt })) });
+  } catch (e) { next(e); }
+});
+router.post('/', requireRole('teacher'), async (req, res, next) => {
+  try {
+    const { text, options, correctOption } = req.body || {};
+    if (typeof text !== 'string' || !text.trim() || !Array.isArray(options) || options.length !== 4 || options.some(o => typeof o !== 'string' || !o.trim()) || !['A','B','C','D'].includes(correctOption))
+      return res.status(400).json({ message: 'Provide a question, four non-empty options and a valid correct answer.' });
+    const q = await Question.create({ text: text.trim(), options: options.map(o => o.trim()), correctOption, createdBy: req.user._id });
+    res.status(201).json({ question: { id: String(q._id), text: q.text, options: q.options, correctOption: q.correctOption, createdAt: q.createdAt } });
+  } catch (e) { next(e); }
+});
+router.patch('/:id', requireRole('teacher'), async (req, res, next) => {
+  try {
+    const update = {}; const { text, options, correctOption } = req.body || {};
+    if (text === undefined && options === undefined && correctOption === undefined) return res.status(400).json({ message: 'Provide at least one field to update.' });
+    if (text !== undefined) { if (typeof text !== 'string' || !text.trim()) return res.status(400).json({ message: 'Question text is required.' }); update.text = text.trim(); }
+    if (options !== undefined) { if (!Array.isArray(options) || options.length !== 4 || options.some(o => typeof o !== 'string' || !o.trim())) return res.status(400).json({ message: 'Exactly four non-empty options are required.' }); update.options = options.map(o => o.trim()); }
+    if (correctOption !== undefined) { if (!['A','B','C','D'].includes(correctOption)) return res.status(400).json({ message: 'Invalid correct answer.' }); update.correctOption = correctOption; }
+    const q = await Question.findOneAndUpdate({ _id: req.params.id, isActive: true, createdBy: req.user._id }, update, { new: true, runValidators: true });
+    if (!q) return res.status(404).json({ message: 'Question not found.' });
+    res.json({ question: { id: String(q._id), text: q.text, options: q.options, correctOption: q.correctOption } });
+  } catch (e) { next(e); }
+});
+router.delete('/:id', requireRole('teacher'), async (req, res, next) => {
+  try {
+    const q = await Question.findOneAndUpdate({ _id: req.params.id, createdBy: req.user._id, isActive: true }, { isActive: false });
+    if (!q) return res.status(404).json({ message: 'Question not found.' });
+    res.json({ message: 'Question removed.' });
+  } catch (e) { next(e); }
+});
+module.exports = router;

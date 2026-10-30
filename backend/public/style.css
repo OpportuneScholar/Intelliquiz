@@ -73,3 +73,48 @@ button,.primary,.secondary{transition:transform .16s ease,filter .16s ease,opaci
 #message.error{background:#fff0f1;border:1px solid #e9a4ad;color:#8f1d2b;box-shadow:0 5px 18px #8f1d2b12}
 @keyframes iq-message-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#message{animation:none}}
+
+
+/* IntelliQuiz responsive dashboard refinement */
+@media (max-width: 1100px) {
+  .iq-shell { grid-template-columns: minmax(0,1fr); gap: 14px; }
+  .iq-side { position: static; display:flex; align-items:center; gap:6px; overflow-x:auto; padding:9px; }
+  .iq-side-brand { display:none; }
+  .iq-nav { flex:0 0 auto; width:auto; white-space:nowrap; margin:0; padding:11px 13px; }
+  .iq-main { width:100%; }
+}
+@media (max-width: 600px) {
+  .dash-head { align-items:flex-start; gap:12px; }
+  .dash-head h1 { font-size:27px; overflow-wrap:anywhere; }
+  .iq-page-head { flex-direction:column; align-items:stretch; }
+  .iq-page-head .primary { align-self:flex-start; }
+  .iq-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .iq-stats article { padding:10px; }
+  .iq-stats small { font-size:10px; }
+  .iq-stats b { font-size:19px; }
+  .iq-panel,.iq-exam-card { padding:14px; }
+  .iq-options { grid-template-columns:1fr; }
+}
+body[data-theme="light"] .iq-side,
+body[data-theme="light"] .iq-panel,
+body[data-theme="light"] .iq-exam-card,
+body[data-theme="light"] .iq-stats article {
+  background:#fff;
+  border-color:#d8e0ed;
+  color:#17243c;
+  box-shadow:0 8px 24px #263d5b0b;
+}
+body[data-theme="light"] .iq-nav { color:#52627a; }
+body[data-theme="light"] .iq-nav.active,
+body[data-theme="light"] .iq-nav:hover { background:#e8f1fb; color:#17243c; }
+body[data-theme="light"] .iq-panel h3,
+body[data-theme="light"] .iq-exam-card h3 { color:#17243c; }
+body[data-theme="light"] .iq-muted,
+body[data-theme="light"] .iq-stats small { color:#5c6b83; }
+body[data-theme="light"] .iq-form textarea,
+body[data-theme="light"] .iq-answer,
+body[data-theme="light"] .iq-select-questions { background:#f8faff; color:#17243c; border-color:#d8e0ed; }
+body[data-theme="light"] .iq-check,
+body[data-theme="light"] .iq-answer { color:#26364f; }
+body[data-theme="light"] .iq-question { border-color:#e2e8f0; }
+body[data-theme="light"] .iq-share input { background:#f8faff; color:#17243c; }
